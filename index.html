@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SurPaheli (सुर पहेली) — Daily Hindi Song Guessing Game</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    body {
+      font-family: 'Inter', 'Noto Sans Devanagari', sans-serif;
+      background-color: #0b0d17;
+      background-image:
+        radial-gradient(circle at 50% -10%, rgba(245, 158, 11, 0.14), transparent 45%),
+        radial-gradient(circle at 85% 20%, rgba(236, 72, 153, 0.08), transparent 40%);
+      min-height: 100vh;
+      color: #f8fafc;
+      overflow-x: hidden;
+    }
+    .hindi-font {
+      font-family: 'Noto Sans Devanagari', 'Inter', sans-serif;
+    }
+    .surface-card {
+      background: rgba(19, 22, 38, 0.88);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      backdrop-filter: blur(12px);
+    }
+    .guess-row {
+      transition: all 0.2s ease;
+    }
+    .ad-slot-frame {
+      background: repeating-linear-gradient(
+        -45deg,
+        rgba(15, 18, 32, 0.9),
+        rgba(15, 18, 32, 0.9) 10px,
+        rgba(30, 35, 58, 0.55) 10px,
+        rgba(30, 35, 58, 0.55) 20px
+      );
+      border: 1px dashed rgba(148, 163, 184, 0.28);
+    }
+    @keyframes pulseRing {
+      0% { transform: scale(1); opacity: 0.6; }
+      100% { transform: scale(1.38); opacity: 0; }
+    }
+    .play-pulse::after {
+      content: "";
+      position: absolute;
+      inset: -4px;
+      border-radius: 9999px;
+      border: 2px solid #f59e0b;
+      animation: pulseRing 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0b0d17; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+  </style>
+</head>
+<body class="antialiased selection:bg-amber-400 selection:text-slate-950 flex flex-col min-h-screen">
+
+  <!-- Minimalist Top Bar (Songless-inspired, clean & focused) -->
+  <header class="w-full border-b border-slate-800/80 bg-[#0b0d17]/90 backdrop-blur-md sticky top-0 z-30">
+    <div class="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+      <!-- Left: Help & Archive -->
+      <div class="flex items-center gap-1.5">
+        <button id="btnOpenHowToPlay" type="button" class="w-9 h-9 rounded-lg hover:bg-slate-800/80 flex items-center justify-center text-slate-300 hover:text-white transition" title="How to Play">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </button>
+        <button id="btnOpenArchive" type="button" class="px-2.5 h-9 rounded-lg hover:bg-slate-800/80 flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-white transition" title="30-Song Archive">
+          <span>📅</span>
+          <span class="hidden sm:inline">Archive</span>
+        </button>
+      </div>
+
+      <!-- Center: Brand Title -->
+      <div class="flex items-center gap-2 select-none">
+        <span class="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-rose-500 flex items-center justify-center text-slate-950 font-extrabold text-sm shadow">
+          सु
+        </span>
+        <span class="text-lg sm:text-xl font-extrabold tracking-tight text-white">
+          Sur<span class="text-amber-400">Paheli</span>
+        </span>
+        <span class="hidden sm:inline text-[11px] font-semibold px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 hindi-font">
+          सुर पहेली
+        </span>
+      </div>
+
+      <!-- Right: Stats, Sound & AdSense Studio -->
+      <div class="flex items-center gap-1.5">
+        <button id="btnOpenStats" type="button" class="w-9 h-9 rounded-lg hover:bg-slate-800/80 flex items-center justify-center text-slate-300 hover:text-white transition" title="Your Stats">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+        </button>
+        <button id="btnMuteToggle" type="button" class="w-9 h-9 rounded-lg hover:bg-slate-800/80 flex items-center justify-center text-slate-300 hover:text-white transition" title="Toggle Sound">
+          <span id="muteIcon" class="text-base">🔊</span>
+        </button>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Single-Column Centered Game Container (max-w-xl, Songless-style) -->
+  <main class="flex-1 w-full max-w-xl mx-auto px-4 py-5 flex flex-col gap-4">
+
+    <!-- Category / Mood Filter Pills (Distinctly Hindi Bollywood) -->
+    <div class="flex items-center justify-center gap-1.5 flex-wrap" role="tablist" aria-label="Song Categories">
+      <button type="button" data-category="all" class="cat-pill px-3 py-1 rounded-full text-xs font-semibold bg-amber-400 text-slate-950 transition">All Hits</button>
+      <button type="button" data-category="classic" class="cat-pill px-3 py-1 rounded-full text-xs font-semibold bg-slate-800/80 text-slate-300 hover:text-white transition">90s &amp; 2000s</button>
+      <button type="button" data-category="romantic" class="cat-pill px-3 py-1 rounded-full text-xs font-semibold bg-slate-800/80 text-slate-300 hover:text-white transition">Romantic</button>
+      <button type="button" data-category="sufi" class="cat-pill px-3 py-1 rounded-full text-xs font-semibold bg-slate-800/80 text-slate-300 hover:text-white transition">Sufi &amp; Soul</button>
+      <button type="button" data-category="dance" class="cat-pill px-3 py-1 rounded-full text-xs font-semibold bg-slate-800/80 text-slate-300 hover:text-white transition">Dance &amp; Party</button>
+    </div>
+
+    <!-- Daily Puzzle Status Row -->
+    <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+      <div class="flex items-center gap-2">
+        <span id="puzzleDayLabel" class="font-bold text-white">Daily #1</span>
+        <span>•</span>
+        <span id="audioSourceStatusBadge" class="text-emerald-400 font-medium">Loading song...</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="countdownTimer" class="font-mono text-slate-400">Next: --:--:--</span>
+        <button id="btnLiveRandomSong" type="button" class="text-amber-300 hover:text-amber-200 font-semibold underline underline-offset-2">
+          Unlimited / Random
+        </button>
+      </div>
+    </div>
+
+    <!-- 6-Row Guess Stack (Wordle / Songless style) -->
+    <div id="guessRowsContainer" class="flex flex-col gap-2">
+      <!-- 6 rows rendered by JS -->
+    </div>
+
+    <!-- Compact Optional Hint Drawer (Keeps main screen clean, reveals clues on demand) -->
+    <div class="flex items-center justify-between gap-2 px-1">
+      <button id="btnToggleHint" type="button" class="text-xs font-semibold text-purple-300 hover:text-purple-200 flex items-center gap-1.5 transition">
+        <span>💡</span>
+        <span id="hintToggleLabel">Peek Progressive Clue</span>
+      </button>
+      <div class="flex items-center gap-2 text-[11px] text-slate-400">
+        <button id="btnModeSwitch" type="button" class="hover:text-amber-300 transition" title="Switch between Real Song stream and Synth backup">
+          Mode: <strong id="modeSwitchLabel" class="text-slate-200">Real Song</strong>
+        </button>
+        <span>•</span>
+        <label for="customMp3Input" class="cursor-pointer hover:text-amber-300 transition">
+          Upload MP3
+        </label>
+        <input id="customMp3Input" type="file" accept="audio/*" class="hidden" />
+      </div>
+    </div>
+
+    <div id="peekHintBox" class="hidden surface-card rounded-xl px-4 py-3 text-xs text-slate-200 space-y-1">
+      <div class="text-[11px] uppercase tracking-wider font-bold text-amber-300" id="peekHintTitle">Clue #1</div>
+      <div id="peekHintText" class="text-sm font-medium text-white hindi-font"></div>
+    </div>
+
+    <!-- Audio Player & Segmented Timeline (0.1s -> 0.3s -> 0.5s -> 1.5s -> 2.5s -> 5.0s) -->
+    <div class="surface-card rounded-2xl p-4 sm:p-5 space-y-4">
+      <audio id="realSongAudio" preload="auto" crossorigin="anonymous" class="hidden"></audio>
+
+      <!-- Segmented Duration Bar -->
+      <div class="space-y-1.5">
+        <div class="flex justify-between items-center text-[11px] font-mono text-slate-400">
+          <span id="unlockedDurationBadge" class="text-amber-300 font-bold">0.1s unlocked</span>
+          <span>5.0s max</span>
+        </div>
+
+        <div class="relative h-7 w-full bg-slate-950 rounded-lg border border-slate-800 overflow-hidden flex">
+          <!-- Active playback sweep overlay -->
+          <div id="playbackProgressFill" class="absolute inset-y-0 left-0 bg-gradient-to-r from-amber-500/80 to-rose-500/80 transition-none pointer-events-none" style="width: 0%;"></div>
+          <!-- Unlocked region tint -->
+          <div id="unlockedRegionTint" class="absolute inset-y-0 left-0 bg-amber-400/15 pointer-events-none" style="width: 2%;"></div>
+
+          <!-- 6 Segment Markers: 0.1s, 0.3s, 0.5s, 1.5s, 2.5s, 5.0s -->
+          <div class="relative z-10 flex w-full text-[10px] font-mono">
+            <div data-seg="0" style="width: 14%" class="seg-marker border-r border-slate-800 flex items-center justify-center text-amber-300 font-bold">0.1s</div>
+            <div data-seg="1" style="width: 14%" class="seg-marker border-r border-slate-800 flex items-center justify-center text-slate-500">0.3s</div>
+            <div data-seg="2" style="width: 14%" class="seg-marker border-r border-slate-800 flex items-center justify-center text-slate-500">0.5s</div>
+            <div data-seg="3" style="width: 18%" class="seg-marker border-r border-slate-800 flex items-center justify-center text-slate-500">1.5s</div>
+            <div data-seg="4" style="width: 18%" class="seg-marker border-r border-slate-800 flex items-center justify-center text-slate-500">2.5s</div>
+            <div data-seg="5" style="width: 22%" class="seg-marker flex items-center justify-center text-slate-500">5.0s</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Giant Play Button + Skip / Prev / Next -->
+      <div class="flex items-center justify-center gap-4">
+        <button id="btnPrevDay" type="button" class="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-300 transition">
+          ← Prev
+        </button>
+
+        <button id="btnPlayMelody" type="button" class="relative w-14 h-14 rounded-full bg-gradient-to-br from-amber-400 to-rose-500 hover:from-amber-300 hover:to-rose-400 text-slate-950 flex items-center justify-center shadow-lg shadow-amber-500/20 transition transform active:scale-95" aria-label="Play song snippet">
+          <span id="playBtnIcon" class="text-xl font-bold ml-0.5">▶</span>
+        </button>
+
+        <button id="btnSkipAttempt" type="button" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-slate-200 transition">
+          Skip (+0.2s)
+        </button>
+      </div>
+
+      <!-- Search & Submit Guess Box (Active while playing) -->
+      <div id="guessInputSection" class="relative space-y-2.5 pt-1">
+        <div class="flex gap-2">
+          <div class="relative flex-1">
+            <input
+              id="songSearchInput"
+              type="text"
+              autocomplete="off"
+              placeholder="Search Hindi song, movie, or singer..."
+              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 focus:border-amber-400 focus:outline-none text-sm text-white placeholder-slate-500"
+            />
+            <button id="btnClearSearch" type="button" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs px-1.5 py-0.5 rounded bg-slate-800">
+              ✕
+            </button>
+          </div>
+          <button id="btnSubmitGuess" type="button" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition whitespace-nowrap">
+            Submit
+          </button>
+        </div>
+
+        <!-- Autocomplete Dropdown -->
+        <div id="searchDropdown" class="hidden absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-xl bg-[#131626] border border-slate-700 shadow-2xl z-30 divide-y divide-slate-800/80">
+        </div>
+      </div>
+
+      <!-- Post-Game Result Card (Shown on Win / Loss) -->
+      <div id="gameOverBanner" class="hidden pt-2 border-t border-slate-800 space-y-3">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <span id="resultBadge" class="inline-block text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 mb-1">
+              🎉 Correct!
+            </span>
+            <h3 id="answerSongTitle" class="text-base sm:text-lg font-extrabold text-white"></h3>
+            <p id="answerSongMeta" class="text-xs text-slate-400 mt-0.5"></p>
+          </div>
+          <a id="answerSourceLink" href="https://en.wikipedia.org/wiki/Tum_Hi_Ho" target="_blank" rel="noopener noreferrer" class="text-xs text-amber-300 hover:underline whitespace-nowrap font-semibold">
+            Credits ↗
+          </a>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button id="btnShareResult" type="button" class="flex-1 py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm transition">
+            📋 Share Score
+          </button>
+          <button id="btnPlayNextPuzzle" type="button" class="flex-1 py-2.5 px-4 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs sm:text-sm transition">
+            ▶️ Next Song
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AdSense Slot #1 (Silent, non-intrusive below game card — replace ca-pub & slot IDs before deploying) -->
+    <div id="adSlotContainer1" class="mt-4 min-h-[90px] flex items-center justify-center">
+      <ins class="adsbygoogle"
+           style="display:block;width:100%"
+           data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+           data-ad-slot="1122334455"
+           data-ad-format="horizontal"
+           data-full-width-responsive="true"></ins>
+    </div>
+
+    <!-- AdSense Slot #2 (Silent post-round slot) -->
+    <div id="adSlotContainer2" class="hidden mt-2 flex items-center justify-center">
+      <ins class="adsbygoogle"
+           style="display:inline-block;width:300px;height:250px"
+           data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+           data-ad-slot="9876543210"></ins>
+    </div>
+
+  </main>
+
+  <!-- Minimalist Footer with Required AdSense Approval Links -->
+  <footer class="border-t border-slate-800/70 py-4 px-4 text-[11px] text-slate-500">
+    <div class="max-w-2xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <span>SurPaheli (सुर पहेली) • Daily Hindi Music Game</span>
+      <div class="flex items-center gap-4">
+        <button type="button" data-policy-modal="about" class="hover:text-slate-300 underline underline-offset-2">About</button>
+        <button type="button" data-policy-modal="privacy" class="hover:text-slate-300 underline underline-offset-2">Privacy &amp; AdSense Policy</button>
+        <button type="button" data-policy-modal="terms" class="hover:text-slate-300 underline underline-offset-2">Terms</button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================= MODAL: ARCHIVE (30+ SONGS) ================= -->
+  <div id="modalArchive" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="surface-card rounded-2xl max-w-xl w-full p-5 border border-slate-700 max-h-[85vh] flex flex-col gap-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-base font-extrabold text-white">📅 Bollywood Song Archive (30+ Hits)</h3>
+          <p class="text-xs text-slate-400">Play any past puzzle or switch categories</p>
+        </div>
+        <button type="button" data-close-modal="modalArchive" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold">✕</button>
+      </div>
+      <div id="archiveGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 overflow-y-auto pr-1">
+      </div>
+      <div class="pt-2 border-t border-slate-800 flex justify-between items-center">
+        <button id="btnResetAllProgress" type="button" class="text-xs text-rose-400 hover:underline font-semibold">Reset Progress</button>
+        <button type="button" data-close-modal="modalArchive" class="px-4 py-1.5 rounded-lg bg-slate-800 text-xs font-semibold text-white">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: STATS & SHARE ================= -->
+  <div id="modalStats" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="surface-card rounded-2xl max-w-md w-full p-5 border border-slate-700 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-extrabold text-white">📊 Your SurPaheli Stats</h3>
+        <button type="button" data-close-modal="modalStats" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold">✕</button>
+      </div>
+
+      <div class="grid grid-cols-4 gap-2 text-center">
+        <div class="bg-slate-900 rounded-xl p-2.5 border border-slate-800">
+          <div id="statTotalPlayed" class="text-xl font-extrabold text-white">0</div>
+          <div class="text-[10px] text-slate-400">Played</div>
+        </div>
+        <div class="bg-slate-900 rounded-xl p-2.5 border border-slate-800">
+          <div id="statWinRate" class="text-xl font-extrabold text-emerald-400">0%</div>
+          <div class="text-[10px] text-slate-400">Win %</div>
+        </div>
+        <div class="bg-slate-900 rounded-xl p-2.5 border border-slate-800">
+          <div id="statCurrentStreak" class="text-xl font-extrabold text-amber-400">0</div>
+          <div class="text-[10px] text-slate-400">Streak</div>
+        </div>
+        <div class="bg-slate-900 rounded-xl p-2.5 border border-slate-800">
+          <div id="statMaxStreak" class="text-xl font-extrabold text-rose-400">0</div>
+          <div class="text-[10px] text-slate-400">Best</div>
+        </div>
+      </div>
+
+      <div class="space-y-1.5">
+        <div class="text-xs font-bold text-slate-300">Guess Distribution (1 to 6)</div>
+        <div id="guessDistributionBars" class="space-y-1.5"></div>
+      </div>
+
+      <button id="btnShareFromStats" type="button" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm transition">
+        📋 Share Score Grid
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: INFO / HOW TO PLAY / POLICIES ================= -->
+  <div id="infoModalOverlay" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="surface-card rounded-2xl max-w-md w-full p-5 border border-slate-700 space-y-4 max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 id="modalTitle" class="text-base font-extrabold text-amber-300">How to Play SurPaheli</h3>
+        <button type="button" data-close-modal="infoModalOverlay" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold">✕</button>
+      </div>
+      <div id="modalBodyContent" class="text-xs sm:text-sm text-slate-300 space-y-2.5 leading-relaxed"></div>
+      <button type="button" data-close-modal="infoModalOverlay" class="w-full py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs">
+        Got It
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toastMessage" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 hidden px-4 py-2.5 rounded-xl bg-slate-900 border border-amber-400/60 text-amber-200 text-xs font-semibold shadow-2xl whitespace-nowrap">
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. 30+ VERIFIED POPULAR HINDI BOLLYWOOD SONGS DATABASE
+    // =========================================================================
+    const SONGS_DB = [
+      { day: 1, id: "tum-hi-ho", title: "Tum Hi Ho", hindiTitle: "तुम ही हो", movie: "Aashiqui 2", year: 2013, category: "romantic", singer: "Arijit Singh", composer: "Mithoon", lyricist: "Mithoon", lyricHook: "Hum tere bin ab reh nahi sakte...", sourceUrl: "https://en.wikipedia.org/wiki/Tum_Hi_Ho", tempo: 68, notes: [329.63, 392.00, 440.00, 392.00, 369.99, 329.63, 293.66, 329.63] },
+      { day: 2, id: "chaiyya-chaiyya", title: "Chaiyya Chaiyya", hindiTitle: "छैंय्या छैंय्या", movie: "Dil Se..", year: 1998, category: "classic", singer: "Sukhwinder Singh & Sapna Awasthi", composer: "A. R. Rahman", lyricist: "Gulzar", lyricHook: "Jinke sar ho ishq ki chhaon...", sourceUrl: "https://en.wikipedia.org/wiki/Chaiyya_Chaiyya", tempo: 112, notes: [440.00, 440.00, 493.88, 523.25, 440.00, 392.00, 440.00, 523.25] },
+      { day: 3, id: "kesariya", title: "Kesariya", hindiTitle: "केसरिया", movie: "Brahmāstra", year: 2022, category: "romantic", singer: "Arijit Singh", composer: "Pritam", lyricist: "Amitabh Bhattacharya", lyricHook: "Kesariya tera ishq hai piya...", sourceUrl: "https://en.wikipedia.org/wiki/Kesariya_(song)", tempo: 94, notes: [392.00, 440.00, 493.88, 523.25, 493.88, 440.00, 392.00, 440.00] },
+      { day: 4, id: "kal-ho-naa-ho", title: "Kal Ho Naa Ho", hindiTitle: "कल हो ना हो", movie: "Kal Ho Naa Ho", year: 2003, category: "classic", singer: "Sonu Nigam", composer: "Shankar–Ehsaan–Loy", lyricist: "Javed Akhtar", lyricHook: "Har ghadi badal rahi hai roop zindagi...", sourceUrl: "https://en.wikipedia.org/wiki/Kal_Ho_Naa_Ho_(song)", tempo: 82, notes: [261.63, 329.63, 392.00, 440.00, 392.00, 349.23, 329.63, 293.66] },
+      { day: 5, id: "tujh-mein-rab-dikhta-hai", title: "Tujh Mein Rab Dikhta Hai", hindiTitle: "तुझ में रब दिखता है", movie: "Rab Ne Bana Di Jodi", year: 2008, category: "romantic", singer: "Roop Kumar Rathod", composer: "Salim–Sulaiman", lyricist: "Jaideep Sahni", lyricHook: "Tujh mein rab dikhta hai, yaara main kya karoon...", sourceUrl: "https://en.wikipedia.org/wiki/Rab_Ne_Bana_Di_Jodi_(soundtrack)", tempo: 88, notes: [349.23, 392.00, 440.00, 523.25, 440.00, 392.00, 349.23, 392.00] },
+      { day: 6, id: "kabira", title: "Kabira", hindiTitle: "कबीरा", movie: "Yeh Jawaani Hai Deewani", year: 2013, category: "sufi", singer: "Tochi Raina & Rekha Bhardwaj", composer: "Pritam", lyricist: "Amitabh Bhattacharya", lyricHook: "Kaisi teri khudgarzi, na dhoop chune na chhaon...", sourceUrl: "https://en.wikipedia.org/wiki/Kabira_(song)", tempo: 86, notes: [293.66, 329.63, 369.99, 440.00, 369.99, 329.63, 293.66, 369.99] },
+      { day: 7, id: "apna-bana-le", title: "Apna Bana Le", hindiTitle: "अपना बना ले", movie: "Bhediya", year: 2022, category: "romantic", singer: "Arijit Singh", composer: "Sachin–Jigar", lyricist: "Amitabh Bhattacharya", lyricHook: "Apna bana le piya, dil ke nagar mein...", sourceUrl: "https://music.apple.com/pk/song/apna-bana-le-from-bhediya/1653219849", tempo: 90, notes: [329.63, 369.99, 440.00, 493.88, 440.00, 369.99, 329.63, 440.00] },
+      { day: 8, id: "tere-vaaste", title: "Tere Vaaste", hindiTitle: "तेरे वास्ते", movie: "Zara Hatke Zara Bachke", year: 2023, category: "romantic", singer: "Varun Jain, Sachin–Jigar, Shadab & Altamash Faridi", composer: "Sachin–Jigar", lyricist: "Amitabh Bhattacharya", lyricHook: "Tere vaaste falak se main chaand launga...", sourceUrl: "https://en.wikipedia.org/wiki/Zara_Hatke_Zara_Bachke", tempo: 118, notes: [392.00, 440.00, 523.25, 587.33, 523.25, 440.00, 392.00, 523.25] },
+      { day: 9, id: "zinda", title: "Zinda", hindiTitle: "ज़िंदा", movie: "Bhaag Milkha Bhaag", year: 2013, category: "dance", singer: "Siddharth Mahadevan", composer: "Shankar–Ehsaan–Loy", lyricist: "Prasoon Joshi", lyricHook: "Zinda hai toh pyala poora bhar le...", sourceUrl: "https://en.wikipedia.org/wiki/Zinda_(song)", tempo: 128, notes: [329.63, 329.63, 392.00, 440.00, 493.88, 440.00, 392.00, 329.63] },
+      { day: 10, id: "kun-faya-kun", title: "Kun Faya Kun", hindiTitle: "कुन फ़या कुन", movie: "Rockstar", year: 2011, category: "sufi", singer: "A. R. Rahman, Javed Ali & Mohit Chauhan", composer: "A. R. Rahman", lyricist: "Irshad Kamil", lyricHook: "Jab kahin pe kuch nahi bhi nahi tha, wahi tha...", sourceUrl: "https://en.wikipedia.org/wiki/Rockstar_(soundtrack)", tempo: 78, notes: [293.66, 329.63, 349.23, 392.00, 440.00, 392.00, 349.23, 329.63] },
+      { day: 11, id: "gerua", title: "Gerua", hindiTitle: "गेरुआ", movie: "Dilwale", year: 2015, category: "romantic", singer: "Arijit Singh & Antara Mitra", composer: "Pritam", lyricist: "Amitabh Bhattacharya", lyricHook: "Rang de tu mohe gerua...", sourceUrl: "https://en.wikipedia.org/wiki/Gerua", tempo: 84, notes: [349.23, 440.00, 523.25, 493.88, 440.00, 392.00, 349.23, 440.00] },
+      { day: 12, id: "raataan-lambiyan", title: "Raataan Lambiyan", hindiTitle: "राताँ लम्बियाँ", movie: "Shershaah", year: 2021, category: "romantic", singer: "Jubin Nautiyal & Asees Kaur", composer: "Tanishk Bagchi", lyricist: "Tanishk Bagchi", lyricHook: "Teri meri gallan ho gayi mashhoor...", sourceUrl: "https://en.wikipedia.org/wiki/Shershaah_(soundtrack)", tempo: 98, notes: [392.00, 440.00, 493.88, 587.33, 523.25, 493.88, 440.00, 392.00] },
+      { day: 13, id: "channa-mereya", title: "Channa Mereya", hindiTitle: "चन्ना मेरेया", movie: "Ae Dil Hai Mushkil", year: 2016, category: "sufi", singer: "Arijit Singh", composer: "Pritam", lyricist: "Amitabh Bhattacharya", lyricHook: "Accha chalta hoon duaaon mein yaad rakhna...", sourceUrl: "https://en.wikipedia.org/wiki/Channa_Mereya", tempo: 85, notes: [329.63, 392.00, 440.00, 493.88, 440.00, 392.00, 329.63, 293.66] },
+      { day: 14, id: "agar-tum-saath-ho", title: "Agar Tum Saath Ho", hindiTitle: "अगर तुम साथ हो", movie: "Tamasha", year: 2015, category: "sufi", singer: "Alka Yagnik & Arijit Singh", composer: "A. R. Rahman", lyricist: "Irshad Kamil", lyricHook: "Pal bhar thahar jaao, dil ye sambhal jaaye...", sourceUrl: "https://www.jiosaavn.com/lyrics/agar-tum-saath-ho-from-tamasha-lyrics/JgE5YUAFWlo", tempo: 76, notes: [261.63, 293.66, 329.63, 392.00, 349.23, 329.63, 293.66, 261.63] },
+      { day: 15, id: "chaleya", title: "Chaleya", hindiTitle: "चलेया", movie: "Jawan", year: 2023, category: "dance", singer: "Arijit Singh & Shilpa Rao", composer: "Anirudh Ravichander", lyricist: "Kumaar", lyricHook: "Ishq mein dil bana hai, ishq mein dil fana hai...", sourceUrl: "https://music.apple.com/in/song/chaleya/1705952066", tempo: 96, notes: [392.00, 440.00, 493.88, 523.25, 493.88, 440.00, 392.00, 493.88] },
+      { day: 16, id: "jhoome-jo-pathaan", title: "Jhoome Jo Pathaan", hindiTitle: "झूमे जो पठान", movie: "Pathaan", year: 2022, category: "dance", singer: "Arijit Singh, Sukriti Kakar, Vishal & Sheykhar", composer: "Vishal–Sheykhar", lyricist: "Kumaar", lyricHook: "Jhoome jo Pathaan meri jaan, mehfil hi lut jaaye...", sourceUrl: "https://www.jiosaavn.com/song/jhoome-jo-pathaan/ElkHAkxbAH4", tempo: 116, notes: [329.63, 392.00, 440.00, 493.88, 440.00, 392.00, 329.63, 440.00] },
+      { day: 17, id: "pehle-bhi-main", title: "Pehle Bhi Main", hindiTitle: "पहले भी मैं", movie: "Animal", year: 2023, category: "romantic", singer: "Vishal Mishra", composer: "Vishal Mishra", lyricist: "Raj Shekhar", lyricHook: "Pehle bhi main tum se mila hoon...", sourceUrl: "https://music.apple.com/ye/song/pehle-bhi-main/1718278234", tempo: 78, notes: [293.66, 349.23, 392.00, 440.00, 392.00, 349.23, 329.63, 293.66] },
+      { day: 18, id: "satranga", title: "Satranga", hindiTitle: "सतरंगा", movie: "Animal", year: 2023, category: "sufi", singer: "Arijit Singh", composer: "Shreyas Puranik", lyricist: "Siddharth–Garima", lyricHook: "Satranga ishq re, jogi main aur ganga tu...", sourceUrl: "https://www.youtube.com/watch?v=YCwP7X42wfw", tempo: 84, notes: [349.23, 392.00, 440.00, 523.25, 493.88, 440.00, 392.00, 349.23] },
+      { day: 19, id: "o-maahi", title: "O Maahi", hindiTitle: "ओ माही", movie: "Dunki", year: 2023, category: "romantic", singer: "Arijit Singh", composer: "Pritam", lyricist: "Irshad Kamil", lyricHook: "O maahi o maahi, meri wafa pe haq tera...", sourceUrl: "https://www.youtube.com/watch?v=Zlqf9cuaOBw", tempo: 92, notes: [329.63, 369.99, 440.00, 493.88, 554.37, 493.88, 440.00, 369.99] },
+      { day: 20, id: "tauba-tauba", title: "Tauba Tauba", hindiTitle: "तौबा तौबा", movie: "Bad Newz", year: 2024, category: "dance", singer: "Karan Aujla", composer: "Karan Aujla", lyricist: "Karan Aujla", lyricHook: "Husn tera tauba tauba...", sourceUrl: "https://www.youtube.com/watch?v=N6_EvGT0ZfM", tempo: 118, notes: [440.00, 493.88, 523.25, 493.88, 440.00, 392.00, 440.00, 493.88] },
+      { day: 21, id: "aaj-ki-raat", title: "Aaj Ki Raat", hindiTitle: "आज की रात", movie: "Stree 2", year: 2024, category: "dance", singer: "Madhubanti Bagchi, Divya Kumar & Sachin–Jigar", composer: "Sachin–Jigar", lyricist: "Amitabh Bhattacharya", lyricHook: "Aaj ki raat maza husn ka aankhon se lijiye...", sourceUrl: "https://music.apple.com/in/song/aaj-ki-raat/1762171370", tempo: 108, notes: [392.00, 440.00, 466.16, 523.25, 466.16, 440.00, 392.00, 440.00] },
+      { day: 22, id: "tujhe-dekha-to", title: "Tujhe Dekha To", hindiTitle: "तुझे देखा तो", movie: "Dilwale Dulhania Le Jayenge", year: 1995, category: "classic", singer: "Kumar Sanu & Lata Mangeshkar", composer: "Jatin–Lalit", lyricist: "Anand Bakshi", lyricHook: "Tujhe dekha to yeh jaana sanam...", sourceUrl: "https://www.youtube.com/watch?v=_hKJEqxn_OU", tempo: 80, notes: [293.66, 349.23, 440.00, 392.00, 349.23, 329.63, 293.66, 349.23] },
+      { day: 23, id: "pehla-nasha", title: "Pehla Nasha", hindiTitle: "पहला नशा", movie: "Jo Jeeta Wohi Sikandar", year: 1992, category: "classic", singer: "Udit Narayan & Sadhana Sargam", composer: "Jatin–Lalit", lyricist: "Majrooh Sultanpuri", lyricHook: "Pehla nasha, pehla khumaar...", sourceUrl: "https://www.saregama.com/song/pehla-nasha_24817", tempo: 82, notes: [261.63, 329.63, 392.00, 523.25, 493.88, 440.00, 392.00, 329.63] },
+      { day: 24, id: "badtameez-dil", title: "Badtameez Dil", hindiTitle: "बदतमीज़ दिल", movie: "Yeh Jawaani Hai Deewani", year: 2013, category: "dance", singer: "Benny Dayal & Shefali Alvares", composer: "Pritam", lyricist: "Amitabh Bhattacharya", lyricHook: "Badtameez dil maane na, maane na...", sourceUrl: "https://www.youtube.com/watch?v=YsVP12mMIQo", tempo: 126, notes: [392.00, 392.00, 440.00, 493.88, 523.25, 493.88, 440.00, 392.00] },
+      { day: 25, id: "senorita", title: "Senorita", hindiTitle: "सेनोरिटा", movie: "Zindagi Na Milegi Dobara", year: 2011, category: "dance", singer: "Farhan Akhtar, Hrithik Roshan & Abhay Deol", composer: "Shankar–Ehsaan–Loy", lyricist: "Javed Akhtar", lyricHook: "Jo bhi tumne mujhse kaha hai Senorita...", sourceUrl: "https://www.jiosaavn.com/song/senorita/IAskXR1aYXo", tempo: 114, notes: [329.63, 369.99, 440.00, 493.88, 440.00, 392.00, 369.99, 329.63] },
+      { day: 26, id: "galliyan", title: "Galliyan", hindiTitle: "गलियाँ", movie: "Ek Villain", year: 2014, category: "romantic", singer: "Ankit Tiwari", composer: "Ankit Tiwari", lyricist: "Manoj Muntashir", lyricHook: "Teri galliyan, galliyan teri galliyan...", sourceUrl: "https://www.youtube.com/watch?v=nj9PnxcEsUM", tempo: 86, notes: [329.63, 392.00, 440.00, 523.25, 493.88, 440.00, 392.00, 329.63] },
+      { day: 27, id: "bekhayali", title: "Bekhayali", hindiTitle: "बेखयाली", movie: "Kabir Singh", year: 2019, category: "sufi", singer: "Sachet Tandon", composer: "Sachet–Parampara", lyricist: "Irshad Kamil", lyricHook: "Bekhayali mein bhi tera hi khayal aaye...", sourceUrl: "https://www.jiosaavn.com/song/bekhayali-from-kabir-singh/BCIHRDNqXAo", tempo: 88, notes: [293.66, 349.23, 440.00, 493.88, 440.00, 392.00, 349.23, 293.66] },
+      { day: 28, id: "ghungroo", title: "Ghungroo", hindiTitle: "घुँघरू", movie: "War", year: 2019, category: "dance", singer: "Arijit Singh & Shilpa Rao", composer: "Vishal–Sheykhar", lyricist: "Kumaar", lyricHook: "Ghungroo toot gaye, main toh rasta bhool gaya...", sourceUrl: "https://www.youtube.com/watch?v=7SHohKbEKog", tempo: 118, notes: [392.00, 440.00, 523.25, 587.33, 523.25, 493.88, 440.00, 392.00] },
+      { day: 29, id: "kajra-re", title: "Kajra Re", hindiTitle: "कजरा रे", movie: "Bunty Aur Babli", year: 2005, category: "classic", singer: "Alisha Chinai, Shankar Mahadevan & Javed Ali", composer: "Shankar–Ehsaan–Loy", lyricist: "Gulzar", lyricHook: "Teri kaali akhiyon se jind meri jaage...", sourceUrl: "https://en.wikipedia.org/wiki/Kajra_Re", tempo: 106, notes: [349.23, 392.00, 440.00, 466.16, 440.00, 392.00, 349.23, 440.00] },
+      { day: 30, id: "jai-ho", title: "Jai Ho", hindiTitle: "जय हो", movie: "Slumdog Millionaire", year: 2008, category: "classic", singer: "A. R. Rahman & Sukhwinder Singh", composer: "A. R. Rahman", lyricist: "Gulzar", lyricHook: "Aaja aaja jind shamiyane ke tale, Jai Ho!", sourceUrl: "https://en.wikipedia.org/wiki/Jai_Ho_(song)", tempo: 132, notes: [440.00, 493.88, 523.25, 587.33, 659.25, 587.33, 523.25, 493.88] }
+    ];
+
+    const UNLOCK_DURATIONS = [0.1, 0.3, 0.5, 1.5, 2.5, 5.0];
+
+    // =========================================================================
+    // 2. APPLICATION STATE & SAFE LOCALSTORAGE
+    // =========================================================================
+    const state = {
+      currentCategory: "all",
+      currentSongIndex: 0,
+      attemptsUsed: 0,
+      guesses: [],
+      status: "playing", // 'playing' | 'won' | 'lost'
+      isMuted: false,
+      isPlayingAudio: false,
+      audioMode: "real", // 'real' | 'synth'
+      currentPreviewUrl: "",
+      customAudioObjectUrl: "",
+      hintVisible: false,
+      showAdSlots: true,
+      completedDays: {},
+      stats: {
+        played: 0,
+        wins: 0,
+        currentStreak: 0,
+        maxStreak: 0,
+        distribution: [0, 0, 0, 0, 0, 0]
+      }
+    };
+
+    function loadPersistedState() {
+      try {
+        const raw = localStorage.getItem("surpaheli_v2_state");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.stats) state.stats = parsed.stats;
+          if (parsed.completedDays) state.completedDays = parsed.completedDays;
+          if (typeof parsed.isMuted === "boolean") state.isMuted = parsed.isMuted;
+        }
+      } catch (e) {}
+    }
+
+    function savePersistedState() {
+      try {
+        localStorage.setItem("surpaheli_v2_state", JSON.stringify({
+          stats: state.stats,
+          completedDays: state.completedDays,
+          isMuted: state.isMuted
+        }));
+      } catch (e) {}
+    }
+
+    // =========================================================================
+    // 3. REAL SONG STREAM + WEB AUDIO SYNTH BACKUP
+    // =========================================================================
+    let audioCtx = null;
+    let activeTimers = [];
+    let progressRafId = null;
+    let playbackStartTime = 0;
+    let currentPlaybackDuration = 0.1;
+
+    function ensureAudioContext() {
+      if (!audioCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (Ctx) audioCtx = new Ctx();
+      }
+      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    }
+
+    async function fetchRealSongPreview(song) {
+      const badge = document.getElementById("audioSourceStatusBadge");
+      if (state.customAudioObjectUrl) {
+        state.currentPreviewUrl = state.customAudioObjectUrl;
+        if (badge) badge.textContent = "Custom MP3 Ready";
+        return;
+      }
+
+      if (song.previewUrl) {
+        state.currentPreviewUrl = song.previewUrl;
+        const audioEl = document.getElementById("realSongAudio");
+        if (audioEl) {
+          audioEl.src = song.previewUrl;
+          audioEl.load();
+        }
+        if (badge) badge.textContent = "Real Song Ready";
+        return;
+      }
+
+      if (badge) badge.textContent = "Loading clip...";
+
+      try {
+        const query = encodeURIComponent(`${song.title} ${song.movie}`);
+        const res = await fetch(`https://itunes.apple.com/search?term=${query}&media=music&entity=song&country=IN&limit=5`);
+        if (!res.ok) throw new Error("API error");
+        const data = await res.json();
+        const match = (data.results || []).find(r => r.previewUrl);
+        if (match && match.previewUrl) {
+          state.currentPreviewUrl = match.previewUrl;
+          const audioEl = document.getElementById("realSongAudio");
+          if (audioEl) {
+            audioEl.src = match.previewUrl;
+            audioEl.load();
+          }
+          if (badge) badge.textContent = "Real Song Ready";
+          return;
+        }
+        throw new Error("No preview");
+      } catch (err) {
+        state.currentPreviewUrl = "";
+        if (badge) badge.textContent = "Synth Mode Ready";
+      }
+    }
+
+    function stopCurrentMelody() {
+      activeTimers.forEach(t => clearTimeout(t));
+      activeTimers = [];
+      if (progressRafId) {
+        cancelAnimationFrame(progressRafId);
+        progressRafId = null;
+      }
+      const audioEl = document.getElementById("realSongAudio");
+      if (audioEl) {
+        try {
+          audioEl.pause();
+          audioEl.currentTime = 0;
+        } catch (e) {}
+      }
+      state.isPlayingAudio = false;
+      const fill = document.getElementById("playbackProgressFill");
+      if (fill) fill.style.width = "0%";
+      updatePlayButtonUI();
+    }
+
+    function animateProgressBar(durationSec) {
+      const fill = document.getElementById("playbackProgressFill");
+      const maxBarWidthPct = (durationSec / 5.0) * 100;
+      const start = performance.now();
+
+      function step() {
+        if (!state.isPlayingAudio) return;
+        const elapsed = (performance.now() - start) / 1000;
+        const ratio = Math.min(1, elapsed / durationSec);
+        if (fill) fill.style.width = `${ratio * maxBarWidthPct}%`;
+        if (ratio < 1) {
+          progressRafId = requestAnimationFrame(step);
+        }
+      }
+      progressRafId = requestAnimationFrame(step);
+    }
+
+    function playSongMelodyHook() {
+      if (state.isPlayingAudio) {
+        stopCurrentMelody();
+        return;
+      }
+
+      const song = SONGS_DB[state.currentSongIndex];
+      const stageIndex = state.status === "playing" ? Math.min(state.attemptsUsed, 5) : 5;
+      const durationSec = UNLOCK_DURATIONS[stageIndex];
+      currentPlaybackDuration = durationSec;
+
+      state.isPlayingAudio = true;
+      playbackStartTime = performance.now();
+      updatePlayButtonUI();
+      animateProgressBar(durationSec);
+
+      const audioEl = document.getElementById("realSongAudio");
+      if (state.audioMode === "real" && state.currentPreviewUrl && audioEl) {
+        audioEl.muted = state.isMuted;
+        try {
+          audioEl.currentTime = (audioEl.duration && audioEl.duration > 8) ? 1.2 : 0;
+        } catch (e) {}
+        const p = audioEl.play();
+        if (p && typeof p.catch === "function") {
+          p.catch(() => playSynthNotesForSong(song, durationSec));
+        }
+        const t = setTimeout(stopCurrentMelody, Math.max(100, durationSec * 1000));
+        activeTimers.push(t);
+        return;
+      }
+
+      ensureAudioContext();
+      if (!audioCtx) return;
+      playSynthNotesForSong(song, durationSec);
+    }
+
+    function playSynthNotesForSong(song, durationSec) {
+      if (!state.isMuted && audioCtx) {
+        const beatDuration = 60 / song.tempo;
+        const stepSec = Math.min(beatDuration * 0.45, Math.max(0.08, durationSec));
+        const totalNotes = Math.max(1, Math.ceil(durationSec / stepSec));
+
+        for (let i = 0; i < totalNotes; i++) {
+          const timerId = setTimeout(() => {
+            if (!state.isPlayingAudio || state.isMuted || !audioCtx) return;
+            const now = audioCtx.currentTime;
+            const freq = song.notes[i % song.notes.length];
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = "triangle";
+            osc.frequency.setValueAtTime(freq, now);
+            gain.gain.setValueAtTime(0.01, now);
+            gain.gain.linearRampToValueAtTime(0.18, now + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + stepSec * 0.9);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + stepSec);
+          }, i * stepSec * 1000);
+          activeTimers.push(timerId);
+        }
+      }
+      const endTimer = setTimeout(stopCurrentMelody, Math.max(100, durationSec * 1000));
+      activeTimers.push(endTimer);
+    }
+
+    function playUiSound(type) {
+      if (state.isMuted) return;
+      ensureAudioContext();
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      if (type === "win") {
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.1);
+        osc.frequency.setValueAtTime(783.99, now + 0.2);
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+        osc.start(now);
+        osc.stop(now + 0.55);
+      } else if (type === "wrong") {
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(190, now);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      }
+    }
+
+    // =========================================================================
+    // 4. GAMEPLAY RENDERING (SONGLESS-INSPIRED 6-ROW STACK)
+    // =========================================================================
+    function loadPuzzleByIndex(index) {
+      stopCurrentMelody();
+      state.currentSongIndex = (index + SONGS_DB.length) % SONGS_DB.length;
+      const song = SONGS_DB[state.currentSongIndex];
+
+      const saved = state.completedDays[song.day];
+      if (saved) {
+        state.status = saved.status;
+        state.attemptsUsed = saved.attempts;
+        state.guesses = saved.guesses || [];
+      } else {
+        state.status = "playing";
+        state.attemptsUsed = 0;
+        state.guesses = [];
+      }
+
+      state.hintVisible = false;
+      const input = document.getElementById("songSearchInput");
+      if (input) input.value = "";
+      hideSearchDropdown();
+
+      fetchRealSongPreview(song);
+      renderAll();
+    }
+
+    function renderGuessRows() {
+      const container = document.getElementById("guessRowsContainer");
+      if (!container) return;
+
+      const target = SONGS_DB[state.currentSongIndex];
+      let html = "";
+
+      for (let i = 0; i < 6; i++) {
+        const entry = state.guesses[i];
+        const isCurrentActive = state.status === "playing" && i === state.attemptsUsed;
+
+        if (!entry) {
+          html += `
+            <div class="guess-row h-11 px-3.5 rounded-xl flex items-center justify-between text-xs border ${
+              isCurrentActive
+                ? "bg-slate-900/95 border-amber-400/70 shadow-sm shadow-amber-500/10"
+                : "bg-slate-950/60 border-slate-800/80 text-slate-600"
+            }">
+              <span class="font-mono ${isCurrentActive ? "text-amber-300 font-bold" : ""}">
+                ${isCurrentActive ? "▶ Guess #" + (i + 1) + " (" + UNLOCK_DURATIONS[i] + "s)" : "Try #" + (i + 1)}
+              </span>
+              <span class="font-mono text-[11px]">${UNLOCK_DURATIONS[i]}s</span>
+            </div>
+          `;
+        } else if (entry.type === "skip") {
+          html += `
+            <div class="guess-row h-11 px-3.5 rounded-xl bg-slate-900/80 border border-slate-700/70 flex items-center justify-between text-xs text-slate-400">
+              <span class="font-semibold tracking-wide">⏭️ SKIPPED</span>
+              <span class="font-mono text-[11px] text-slate-500">${UNLOCK_DURATIONS[i]}s</span>
+            </div>
+          `;
+        } else {
+          const g = entry.song;
+          const isExact = g.id === target.id;
+          const sameArtistOrComposer =
+            !isExact &&
+            (g.singer.split("&")[0].trim() === target.singer.split("&")[0].trim() ||
+              g.composer === target.composer);
+
+          if (isExact) {
+            html += `
+              <div class="guess-row h-11 px-3.5 rounded-xl bg-emerald-500/20 border border-emerald-500/70 flex items-center justify-between text-xs text-emerald-200">
+                <span class="font-bold truncate">🟩 ${g.title} — ${g.singer}</span>
+                <span class="font-bold text-emerald-300 ml-2">MATCH</span>
+              </div>
+            `;
+          } else if (sameArtistOrComposer) {
+            html += `
+              <div class="guess-row h-11 px-3.5 rounded-xl bg-amber-500/20 border border-amber-500/60 flex items-center justify-between text-xs text-amber-200">
+                <span class="font-semibold truncate">🟨 ${g.title} (${g.singer})</span>
+                <span class="text-[11px] font-semibold text-amber-300 ml-2 whitespace-nowrap">Close Artist/Music</span>
+              </div>
+            `;
+          } else {
+            html += `
+              <div class="guess-row h-11 px-3.5 rounded-xl bg-rose-500/15 border border-rose-500/50 flex items-center justify-between text-xs text-rose-200">
+                <span class="font-medium truncate">🟥 ${g.title} (${g.movie})</span>
+                <span class="text-[11px] text-rose-300 ml-2">Miss</span>
+              </div>
+            `;
+          }
+        }
+      }
+
+      container.innerHTML = html;
+    }
+
+    function updatePlayButtonUI() {
+      const stageIndex = state.status === "playing" ? Math.min(state.attemptsUsed, 5) : 5;
+      const sec = UNLOCK_DURATIONS[stageIndex];
+
+      const badge = document.getElementById("unlockedDurationBadge");
+      if (badge) badge.textContent = `${sec}s unlocked`;
+
+      const unlockedTint = document.getElementById("unlockedRegionTint");
+      if (unlockedTint) unlockedTint.style.width = `${(sec / 5.0) * 100}%`;
+
+      document.querySelectorAll(".seg-marker").forEach((el, idx) => {
+        if (idx <= stageIndex) {
+          el.classList.remove("text-slate-500");
+          el.classList.add("text-amber-300", "font-bold");
+        } else {
+          el.classList.add("text-slate-500");
+          el.classList.remove("text-amber-300", "font-bold");
+        }
+      });
+
+      const playBtn = document.getElementById("btnPlayMelody");
+      const playIcon = document.getElementById("playBtnIcon");
+      if (playBtn && playIcon) {
+        if (state.isPlayingAudio) {
+          playIcon.textContent = "⏹";
+          playIcon.classList.remove("ml-0.5");
+          playBtn.classList.add("play-pulse");
+        } else {
+          playIcon.textContent = "▶";
+          playIcon.classList.add("ml-0.5");
+          playBtn.classList.remove("play-pulse");
+        }
+      }
+
+      const skipBtn = document.getElementById("btnSkipAttempt");
+      if (skipBtn) {
+        if (state.status !== "playing") {
+          skipBtn.disabled = true;
+          skipBtn.classList.add("opacity-40", "cursor-not-allowed");
+          skipBtn.textContent = "Round Complete";
+        } else {
+          skipBtn.disabled = false;
+          skipBtn.classList.remove("opacity-40", "cursor-not-allowed");
+          if (state.attemptsUsed < 5) {
+            const delta = (UNLOCK_DURATIONS[state.attemptsUsed + 1] - sec).toFixed(1);
+            skipBtn.textContent = `Skip (+${delta}s)`;
+          } else {
+            skipBtn.textContent = "Give Up";
+          }
+        }
+      }
+    }
+
+    function renderHintBox() {
+      const box = document.getElementById("peekHintBox");
+      const label = document.getElementById("hintToggleLabel");
+      if (!box || !label) return;
+
+      if (!state.hintVisible) {
+        box.classList.add("hidden");
+        label.textContent = "Peek Progressive Clue";
+        return;
+      }
+
+      const song = SONGS_DB[state.currentSongIndex];
+      const clues = [
+        `Release Year: ${song.year}`,
+        `Music Director: ${song.composer}`,
+        `Film / Album: "${song.movie}" (${song.year})`,
+        `Playback Singer(s): ${song.singer}`,
+        `Lyricist: ${song.lyricist}`,
+        `Lyric Hook: "${song.lyricHook}"`
+      ];
+      const idx = state.status === "playing" ? Math.min(state.attemptsUsed, 5) : 5;
+      document.getElementById("peekHintTitle").textContent = `Clue #${idx + 1} (Unlocked)`;
+      document.getElementById("peekHintText").textContent = clues[idx];
+      box.classList.remove("hidden");
+      label.textContent = "Hide Clue";
+    }
+
+    function submitGuess() {
+      if (state.status !== "playing") return;
+      const input = document.getElementById("songSearchInput");
+      if (!input) return;
+      const query = input.value.trim().toLowerCase();
+      if (!query) {
+        showToast("Type or select a Hindi song first!");
+        return;
+      }
+
+      const matchedSong = SONGS_DB.find(
+        s =>
+          s.title.toLowerCase() === query ||
+          s.title.toLowerCase().includes(query) ||
+          s.movie.toLowerCase().includes(query)
+      );
+
+      if (!matchedSong) {
+        showToast("Pick a song from the autocomplete dropdown!");
+        return;
+      }
+
+      if (state.guesses.some(g => g.song && g.song.id === matchedSong.id)) {
+        showToast(`Already guessed "${matchedSong.title}"`);
+        return;
+      }
+
+      const target = SONGS_DB[state.currentSongIndex];
+      state.guesses.push({ type: "guess", song: matchedSong });
+      state.attemptsUsed += 1;
+      input.value = "";
+      hideSearchDropdown();
+
+      if (matchedSong.id === target.id) {
+        state.status = "won";
+        playUiSound("win");
+        recordGameCompletion(target.day, "won", state.attemptsUsed);
+      } else if (state.attemptsUsed >= 6) {
+        state.status = "lost";
+        playUiSound("wrong");
+        recordGameCompletion(target.day, "lost", 6);
+      } else {
+        playUiSound("wrong");
+      }
+
+      renderAll();
+    }
+
+    function skipAttempt() {
+      if (state.status !== "playing") return;
+      const target = SONGS_DB[state.currentSongIndex];
+      state.guesses.push({ type: "skip", song: null });
+      state.attemptsUsed += 1;
+
+      if (state.attemptsUsed >= 6) {
+        state.status = "lost";
+        playUiSound("wrong");
+        recordGameCompletion(target.day, "lost", 6);
+      }
+      renderAll();
+    }
+
+    function recordGameCompletion(dayNumber, outcome, attempts) {
+      const already = Boolean(state.completedDays[dayNumber]);
+      state.completedDays[dayNumber] = { status: outcome, attempts, guesses: state.guesses };
+      if (!already) {
+        state.stats.played += 1;
+        if (outcome === "won") {
+          state.stats.wins += 1;
+          state.stats.currentStreak += 1;
+          if (state.stats.currentStreak > state.stats.maxStreak) {
+            state.stats.maxStreak = state.stats.currentStreak;
+          }
+          state.stats.distribution[Math.min(5, Math.max(0, attempts - 1))] += 1;
+        } else {
+          state.stats.currentStreak = 0;
+        }
+      }
+      savePersistedState();
+    }
+
+    function renderArchiveGrid() {
+      const grid = document.getElementById("archiveGrid");
+      if (!grid) return;
+      grid.innerHTML = SONGS_DB.map((song, idx) => {
+        const rec = state.completedDays[song.day];
+        const statusText = rec
+          ? rec.status === "won" ? `✅ ${rec.attempts}/6` : "❌ Missed"
+          : "Play";
+        return `
+          <button type="button" data-archive-idx="${idx}" class="archive-item-btn text-left p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border ${idx === state.currentSongIndex ? 'border-amber-400' : 'border-slate-800'} flex items-center justify-between gap-2 transition">
+            <div>
+              <div class="text-xs font-bold text-white">Day #${song.day} • ${rec ? song.title : "Mystery Song"}</div>
+              <div class="text-[11px] text-slate-400">${song.year} • ${song.category.toUpperCase()}</div>
+            </div>
+            <span class="text-xs font-semibold ${rec && rec.status === 'won' ? 'text-emerald-400' : 'text-amber-300'}">${statusText}</span>
+          </button>
+        `;
+      }).join("");
+
+      grid.querySelectorAll(".archive-item-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          loadPuzzleByIndex(parseInt(btn.getAttribute("data-archive-idx"), 10));
+          closeModalById("modalArchive");
+        });
+      });
+    }
+
+    function renderStatsModal() {
+      const { played, wins, currentStreak, maxStreak, distribution } = state.stats;
+      const winPct = played > 0 ? Math.round((wins / played) * 100) : 0;
+      document.getElementById("statTotalPlayed").textContent = String(played);
+      document.getElementById("statWinRate").textContent = `${winPct}%`;
+      document.getElementById("statCurrentStreak").textContent = String(currentStreak);
+      document.getElementById("statMaxStreak").textContent = String(maxStreak);
+
+      const barsEl = document.getElementById("guessDistributionBars");
+      if (barsEl) {
+        const maxVal = Math.max(1, ...distribution);
+        barsEl.innerHTML = [0, 1, 2, 3, 4, 5].map(i => {
+          const cnt = distribution[i] || 0;
+          const pct = Math.max(8, Math.round((cnt / maxVal) * 100));
+          return `
+            <div class="flex items-center gap-2 text-xs">
+              <span class="w-6 font-mono text-slate-400">${i + 1}</span>
+              <div class="flex-1 bg-slate-900 rounded overflow-hidden">
+                <div style="width:${pct}%" class="bg-amber-400 text-slate-950 font-bold px-2 py-0.5 text-right">${cnt}</div>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+    }
+
+    function renderAll() {
+      const song = SONGS_DB[state.currentSongIndex];
+      document.getElementById("puzzleDayLabel").textContent = `Daily #${song.day} (${song.category.toUpperCase()})`;
+
+      const guessSection = document.getElementById("guessInputSection");
+      const gameOverBanner = document.getElementById("gameOverBanner");
+      const adSlot2 = document.getElementById("adSlotContainer2");
+
+      if (state.status === "playing") {
+        guessSection.classList.remove("hidden");
+        gameOverBanner.classList.add("hidden");
+        if (adSlot2) adSlot2.classList.add("hidden");
+      } else {
+        guessSection.classList.add("hidden");
+        gameOverBanner.classList.remove("hidden");
+        if (adSlot2 && state.showAdSlots) adSlot2.classList.remove("hidden");
+
+        const badge = document.getElementById("resultBadge");
+        badge.textContent = state.status === "won"
+          ? `🎉 Sahi Jawaab! (${state.attemptsUsed}/6)`
+          : "💡 Better luck tomorrow!";
+        badge.className = state.status === "won"
+          ? "inline-block text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 mb-1"
+          : "inline-block text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 mb-1";
+
+        document.getElementById("answerSongTitle").textContent = `${song.title} (${song.hindiTitle})`;
+        document.getElementById("answerSongMeta").textContent = `${song.movie} (${song.year}) • ${song.singer} • Music: ${song.composer}`;
+        document.getElementById("answerSourceLink").href = song.sourceUrl;
+      }
+
+      document.getElementById("muteIcon").textContent = state.isMuted ? "🔇" : "🔊";
+      document.getElementById("modeSwitchLabel").textContent = state.audioMode === "real" ? "Real Song" : "Synth";
+
+      updatePlayButtonUI();
+      renderGuessRows();
+      renderHintBox();
+      renderArchiveGrid();
+      renderStatsModal();
+    }
+
+    // =========================================================================
+    // 5. AUTOCOMPLETE & LIVE APPLE MUSIC CATALOG SEARCH
+    // =========================================================================
+    let liveSearchAbort = null;
+    function updateSearchDropdown(queryText) {
+      const dropdown = document.getElementById("searchDropdown");
+      const clearBtn = document.getElementById("btnClearSearch");
+      if (!dropdown) return;
+
+      const q = queryText.trim().toLowerCase();
+      if (clearBtn) clearBtn.classList.toggle("hidden", q.length === 0);
+
+      if (!q) {
+        hideSearchDropdown();
+        return;
+      }
+
+      const matches = SONGS_DB.filter(
+        s => s.title.toLowerCase().includes(q) || s.movie.toLowerCase().includes(q) || s.singer.toLowerCase().includes(q)
+      ).slice(0, 8);
+
+      if (matches.length === 0) {
+        dropdown.innerHTML = `<div class="px-3.5 py-2.5 text-xs text-amber-300">Searching live Hindi music catalog...</div>`;
+        dropdown.classList.remove("hidden");
+        searchLiveItunesForAutocomplete(q, dropdown);
+        return;
+      }
+
+      dropdown.innerHTML = matches.map(s => `
+        <button type="button" data-select-title="${s.title}" class="autocomplete-item w-full text-left px-3.5 py-2 hover:bg-slate-800/80 flex items-center justify-between gap-2 transition">
+          <div>
+            <div class="text-xs sm:text-sm font-bold text-white">${s.title} <span class="text-amber-300 font-normal hindi-font">(${s.hindiTitle})</span></div>
+            <div class="text-[11px] text-slate-400">${s.movie} (${s.year}) • ${s.singer}</div>
+          </div>
+          <span class="text-[11px] text-amber-300 font-semibold">Pick</span>
+        </button>
+      `).join("");
+
+      dropdown.classList.remove("hidden");
+      dropdown.querySelectorAll(".autocomplete-item").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.getElementById("songSearchInput").value = btn.getAttribute("data-select-title");
+          hideSearchDropdown();
+          submitGuess();
+        });
+      });
+    }
+
+    async function searchLiveItunesForAutocomplete(q, dropdown) {
+      try {
+        if (liveSearchAbort) liveSearchAbort.abort();
+        liveSearchAbort = new AbortController();
+        const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q + " hindi")}&media=music&entity=song&country=IN&limit=6`, { signal: liveSearchAbort.signal });
+        const data = await res.json();
+        const items = (data.results || []).filter(r => r.trackName && r.previewUrl);
+        if (items.length === 0) {
+          dropdown.innerHTML = `<div class="px-3.5 py-2.5 text-xs text-slate-400">No songs found. Try another title or singer.</div>`;
+          return;
+        }
+        dropdown.innerHTML = items.map((item, idx) => `
+          <button type="button" data-live-idx="${idx}" class="live-autocomplete-item w-full text-left px-3.5 py-2 hover:bg-slate-800/80 flex items-center justify-between gap-2 transition">
+            <div>
+              <div class="text-xs sm:text-sm font-bold text-white">${item.trackName}</div>
+              <div class="text-[11px] text-slate-400">${item.collectionName || "Bollywood"} • ${item.artistName}</div>
+            </div>
+            <span class="text-[11px] text-emerald-400 font-semibold">Live ↵</span>
+          </button>
+        `).join("");
+
+        dropdown.querySelectorAll(".live-autocomplete-item").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const item = items[parseInt(btn.getAttribute("data-live-idx"), 10)];
+            if (!item) return;
+            if (!SONGS_DB.some(s => s.title.toLowerCase() === item.trackName.toLowerCase())) {
+              SONGS_DB.push({
+                day: SONGS_DB.length + 1,
+                id: "live-" + Date.now(),
+                title: item.trackName,
+                hindiTitle: "बॉलीवुड हिट",
+                movie: item.collectionName || "Hindi Single",
+                year: parseInt((item.releaseDate || "2022").slice(0, 4), 10) || 2022,
+                category: "all",
+                singer: item.artistName,
+                composer: item.artistName,
+                lyricist: "Official Release",
+                lyricHook: `From "${item.collectionName || item.trackName}"`,
+                sourceUrl: item.trackViewUrl || "https://music.apple.com/in/browse",
+                tempo: 96,
+                notes: [329.63, 392.00, 440.00, 493.88, 440.00, 392.00, 329.63, 440.00],
+                previewUrl: item.previewUrl
+              });
+            }
+            document.getElementById("songSearchInput").value = item.trackName;
+            hideSearchDropdown();
+            submitGuess();
+          });
+        });
+      } catch (e) {
+        if (e.name !== "AbortError") hideSearchDropdown();
+      }
+    }
+
+    async function fetchLiveRandomPopularSong() {
+      const cat = state.currentCategory;
+      const pool = cat === "all" ? SONGS_DB : SONGS_DB.filter(s => s.category === cat);
+      const artists = ["Arijit Singh", "Pritam", "A.R. Rahman", "Shreya Ghoshal", "Kishore Kumar", "Sonu Nigam", "Vishal Mishra", "Sachin-Jigar"];
+      const randomArtist = artists[Math.floor(Math.random() * artists.length)];
+      showToast(`Loading random Hindi hit...`);
+      try {
+        const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(randomArtist)}&media=music&entity=song&country=IN&limit=20`);
+        if (!res.ok) throw new Error("API err");
+        const data = await res.json();
+        const valid = (data.results || []).filter(r => r.trackName && r.previewUrl);
+        if (valid.length === 0) throw new Error("Empty");
+        const pick = valid[Math.floor(Math.random() * valid.length)];
+        const cleanTitle = pick.trackName.replace(/\s*\(From.*?\)/i, "").trim();
+        let idx = SONGS_DB.findIndex(s => s.title.toLowerCase() === cleanTitle.toLowerCase());
+        if (idx === -1) {
+          SONGS_DB.push({
+            day: SONGS_DB.length + 1,
+            id: "live-" + Date.now(),
+            title: cleanTitle,
+            hindiTitle: "बॉलीवुड हिट",
+            movie: pick.collectionName || "Bollywood",
+            year: parseInt((pick.releaseDate || "2022").slice(0, 4), 10) || 2022,
+            category: cat,
+            singer: pick.artistName,
+            composer: pick.artistName,
+            lyricist: "Official Release",
+            lyricHook: `Track "${cleanTitle}" from ${pick.collectionName || "Bollywood"}`,
+            sourceUrl: pick.trackViewUrl || "https://music.apple.com/in/browse",
+            tempo: 96,
+            notes: [349.23, 392.00, 440.00, 523.25, 493.88, 440.00, 392.00, 349.23],
+            previewUrl: pick.previewUrl
+          });
+          idx = SONGS_DB.length - 1;
+        }
+        loadPuzzleByIndex(idx);
+      } catch (e) {
+        const chosen = pool[Math.floor(Math.random() * pool.length)] || SONGS_DB[0];
+        loadPuzzleByIndex(SONGS_DB.indexOf(chosen));
+      }
+    }
+
+    function hideSearchDropdown() {
+      const d = document.getElementById("searchDropdown");
+      if (d) d.classList.add("hidden");
+    }
+
+    // =========================================================================
+    // 6. ADSENSE STUDIO & CLIPBOARD / MODALS
+    // =========================================================================
+    function copyTextSafe(text, msg) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => showToast(msg)).catch(() => fallbackCopy(text, msg));
+      } else {
+        fallbackCopy(text, msg);
+      }
+    }
+
+    function fallbackCopy(text, msg) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); showToast(msg); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+
+    function buildShareText() {
+      const song = SONGS_DB[state.currentSongIndex];
+      const boxes = state.guesses.map(g => {
+        if (g.type === "skip") return "⬛";
+        if (g.song && g.song.id === song.id) return "🟩";
+        const same = g.song.composer === song.composer || g.song.singer.split("&")[0].trim() === song.singer.split("&")[0].trim();
+        return same ? "🟨" : "🟥";
+      }).join("");
+      return `🔊 SurPaheli #${song.day} (${state.status === "won" ? state.attemptsUsed + "/6" : "X/6"})\n${boxes}\nGuess today's Hindi song from 0.1s!`;
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById("toastMessage");
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.remove("hidden");
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.add("hidden"), 2500);
+    }
+
+    function closeModalById(id) {
+      document.getElementById(id)?.classList.add("hidden");
+    }
+
+    function openInfoModal(type) {
+      const overlay = document.getElementById("infoModalOverlay");
+      const title = document.getElementById("modalTitle");
+      const body = document.getElementById("modalBodyContent");
+      if (type === "rules") {
+        title.textContent = "🎵 How to Play SurPaheli";
+        body.innerHTML = `
+          <p><strong>1.</strong> Press <strong>▶</strong> to listen to a <strong>0.1s</strong> snippet of today's Hindi Bollywood song.</p>
+          <p><strong>2.</strong> Guess the song or hit <strong>Skip</strong> to unlock longer audio: <code>0.1s → 0.3s → 0.5s → 1.5s → 2.5s → 5.0s</code>.</p>
+          <p><strong>3. Color Key:</strong> 🟩 Exact song • 🟨 Right singer or composer • 🟥 Miss • ⬛ Skipped.</p>
+        `;
+      } else if (type === "privacy") {
+        title.textContent = "🔒 Privacy Policy";
+        body.innerHTML = `
+          <p>Third-party vendors, including Google, may use cookies to serve ads based on prior visits. Your game streaks and stats are stored locally in your browser.</p>
+        `;
+      } else if (type === "terms") {
+        title.textContent = "⚖️ Terms & Audio Credits";
+        body.innerHTML = `
+          <p>Official 30s previews are streamed directly via the Apple iTunes Search API and capped to 0.1s–5.0s for trivia gameplay. All rights belong to respective music labels.</p>
+        `;
+      } else {
+        title.textContent = "🇮🇳 About SurPaheli";
+        body.innerHTML = `<p>SurPaheli (सुर पहेली) is a daily Bollywood song guessing game built for fast, low-ad web play.</p>`;
+      }
+      overlay.classList.remove("hidden");
+    }
+
+    function updateCountdown() {
+      const now = new Date();
+      const tom = new Date(now);
+      tom.setHours(24, 0, 0, 0);
+      const diff = Math.max(0, tom - now);
+      const h = String(Math.floor(diff / 3600000)).padStart(2, "0");
+      const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0");
+      const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
+      document.getElementById("countdownTimer").textContent = `Next: ${h}:${m}:${s}`;
+    }
+
+    // =========================================================================
+    // 7. INITIALIZATION
+    // =========================================================================
+    window.onload = function () {
+      loadPersistedState();
+
+      // Category Filter Pills
+      document.querySelectorAll(".cat-pill").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const cat = btn.getAttribute("data-category");
+          state.currentCategory = cat;
+          document.querySelectorAll(".cat-pill").forEach(b => {
+            if (b.getAttribute("data-category") === cat) {
+              b.className = "cat-pill px-3 py-1 rounded-full text-xs font-semibold bg-amber-400 text-slate-950 transition";
+            } else {
+              b.className = "cat-pill px-3 py-1 rounded-full text-xs font-semibold bg-slate-800/80 text-slate-300 hover:text-white transition";
+            }
+          });
+          const matchIdx = cat === "all" ? 0 : SONGS_DB.findIndex(s => s.category === cat);
+          if (matchIdx !== -1) loadPuzzleByIndex(matchIdx);
+        });
+      });
+
+      // Header & Modal Buttons
+      document.getElementById("btnOpenHowToPlay")?.addEventListener("click", () => openInfoModal("rules"));
+      document.getElementById("btnOpenArchive")?.addEventListener("click", () => document.getElementById("modalArchive").classList.remove("hidden"));
+      document.getElementById("btnOpenStats")?.addEventListener("click", () => document.getElementById("modalStats").classList.remove("hidden"));
+
+      document.querySelectorAll("[data-close-modal]").forEach(btn => {
+        btn.addEventListener("click", () => closeModalById(btn.getAttribute("data-close-modal")));
+      });
+      document.querySelectorAll("[data-policy-modal]").forEach(btn => {
+        btn.addEventListener("click", () => openInfoModal(btn.getAttribute("data-policy-modal")));
+      });
+
+      // Audio & Gameplay Controls
+      document.getElementById("btnPlayMelody")?.addEventListener("click", playSongMelodyHook);
+      document.getElementById("btnSkipAttempt")?.addEventListener("click", skipAttempt);
+      document.getElementById("btnSubmitGuess")?.addEventListener("click", submitGuess);
+      document.getElementById("btnPrevDay")?.addEventListener("click", () => loadPuzzleByIndex(state.currentSongIndex - 1));
+      document.getElementById("btnPlayNextPuzzle")?.addEventListener("click", () => loadPuzzleByIndex(state.currentSongIndex + 1));
+      document.getElementById("btnLiveRandomSong")?.addEventListener("click", fetchLiveRandomPopularSong);
+
+      document.getElementById("btnMuteToggle")?.addEventListener("click", () => {
+        state.isMuted = !state.isMuted;
+        if (state.isMuted) stopCurrentMelody();
+        savePersistedState();
+        renderAll();
+      });
+
+      document.getElementById("btnModeSwitch")?.addEventListener("click", () => {
+        stopCurrentMelody();
+        state.audioMode = state.audioMode === "real" ? "synth" : "real";
+        renderAll();
+        showToast(`Switched to ${state.audioMode === "real" ? "Real Song" : "Synth"} mode`);
+      });
+
+      document.getElementById("btnToggleHint")?.addEventListener("click", () => {
+        state.hintVisible = !state.hintVisible;
+        renderHintBox();
+      });
+
+      document.getElementById("customMp3Input")?.addEventListener("change", e => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        stopCurrentMelody();
+        if (state.customAudioObjectUrl) {
+          try { URL.revokeObjectURL(state.customAudioObjectUrl); } catch (err) {}
+        }
+        state.customAudioObjectUrl = URL.createObjectURL(file);
+        state.currentPreviewUrl = state.customAudioObjectUrl;
+        state.audioMode = "real";
+        const audioEl = document.getElementById("realSongAudio");
+        if (audioEl) {
+          audioEl.src = state.customAudioObjectUrl;
+          audioEl.load();
+        }
+        renderAll();
+        showToast(`Loaded "${file.name}"`);
+      });
+
+      const searchInput = document.getElementById("songSearchInput");
+      if (searchInput) {
+        searchInput.addEventListener("input", e => updateSearchDropdown(e.target.value));
+        searchInput.addEventListener("keydown", e => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            submitGuess();
+          }
+        });
+      }
+      document.getElementById("btnClearSearch")?.addEventListener("click", () => {
+        searchInput.value = "";
+        hideSearchDropdown();
+        searchInput.focus();
+      });
+
+      // Share & Reset
+      document.getElementById("btnShareResult")?.addEventListener("click", () => copyTextSafe(buildShareText(), "Score copied!"));
+      document.getElementById("btnShareFromStats")?.addEventListener("click", () => copyTextSafe(buildShareText(), "Stats copied!"));
+      document.getElementById("btnResetAllProgress")?.addEventListener("click", () => {
+        state.completedDays = {};
+        state.stats = { played: 0, wins: 0, currentStreak: 0, maxStreak: 0, distribution: [0, 0, 0, 0, 0, 0] };
+        savePersistedState();
+        loadPuzzleByIndex(0);
+        showToast("Progress reset!");
+      });
+
+      updateCountdown();
+      setInterval(updateCountdown, 1000);
+      loadPuzzleByIndex(0);
+    };
+  </script>
+</body>
+</html>
