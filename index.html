@@ -55,6 +55,18 @@
       border: 2px solid #f59e0b;
       animation: pulseRing 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
     }
+    @keyframes eqBounce {
+      0%, 100% { transform: scaleY(0.25); }
+      50% { transform: scaleY(1); }
+    }
+    .eq-bar {
+      transform-origin: bottom;
+      transform: scaleY(0.25);
+      transition: transform 0.15s ease;
+    }
+    .eq-playing .eq-bar {
+      animation: eqBounce 0.55s ease-in-out infinite;
+    }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #0b0d17; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
@@ -93,6 +105,9 @@
       <div class="flex items-center gap-1.5">
         <button id="btnOpenStats" type="button" class="w-9 h-9 rounded-lg hover:bg-slate-800/80 flex items-center justify-center text-slate-300 hover:text-white transition" title="Your Stats">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+        </button>
+        <button id="btnLangToggle" type="button" class="px-2 h-8 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[11px] font-bold text-amber-300 transition" title="Switch Language (English / Hindi)">
+          EN / हिं
         </button>
         <button id="btnMuteToggle" type="button" class="w-9 h-9 rounded-lg hover:bg-slate-800/80 flex items-center justify-center text-slate-300 hover:text-white transition" title="Toggle Sound">
           <span id="muteIcon" class="text-base">🔊</span>
@@ -134,54 +149,49 @@
       <!-- 6 rows rendered by JS -->
     </div>
 
-    <!-- Compact Optional Hint Drawer (Keeps main screen clean, reveals clues on demand) -->
-    <div class="flex items-center justify-between gap-2 px-1">
-      <button id="btnToggleHint" type="button" class="text-xs font-semibold text-purple-300 hover:text-purple-200 flex items-center gap-1.5 transition">
-        <span>💡</span>
-        <span id="hintToggleLabel">Peek Progressive Clue</span>
-      </button>
-      <div class="flex items-center gap-2 text-[11px] text-slate-400">
-        <button id="btnModeSwitch" type="button" class="hover:text-amber-300 transition" title="Switch between Real Song stream and Synth backup">
-          Mode: <strong id="modeSwitchLabel" class="text-slate-200">Real Song</strong>
-        </button>
-        <span>•</span>
-        <label for="customMp3Input" class="cursor-pointer hover:text-amber-300 transition">
-          Upload MP3
-        </label>
-        <input id="customMp3Input" type="file" accept="audio/*" class="hidden" />
-      </div>
-    </div>
 
-    <div id="peekHintBox" class="hidden surface-card rounded-xl px-4 py-3 text-xs text-slate-200 space-y-1">
-      <div class="text-[11px] uppercase tracking-wider font-bold text-amber-300" id="peekHintTitle">Clue #1</div>
-      <div id="peekHintText" class="text-sm font-medium text-white hindi-font"></div>
-    </div>
 
     <!-- Audio Player & Segmented Timeline (0.1s -> 0.3s -> 0.5s -> 1.5s -> 2.5s -> 5.0s) -->
     <div class="surface-card rounded-2xl p-4 sm:p-5 space-y-4">
       <audio id="realSongAudio" preload="auto" crossorigin="anonymous" class="hidden"></audio>
 
-      <!-- Segmented Duration Bar -->
+      <!-- Segmented Duration Bar + Live Equalizer -->
       <div class="space-y-1.5">
         <div class="flex justify-between items-center text-[11px] font-mono text-slate-400">
-          <span id="unlockedDurationBadge" class="text-amber-300 font-bold">0.1s unlocked</span>
-          <span>5.0s max</span>
+          <div class="flex items-center gap-2">
+            <span id="unlockedDurationBadge" class="text-amber-300 font-bold">0.1s unlocked</span>
+            <div id="eqVisualizer" class="flex items-end gap-0.5 h-3.5" aria-hidden="true">
+              <span class="eq-bar w-0.5 h-full bg-amber-400 rounded-full" style="animation-delay:0s"></span>
+              <span class="eq-bar w-0.5 h-full bg-rose-400 rounded-full" style="animation-delay:0.12s"></span>
+              <span class="eq-bar w-0.5 h-full bg-amber-300 rounded-full" style="animation-delay:0.24s"></span>
+              <span class="eq-bar w-0.5 h-full bg-rose-500 rounded-full" style="animation-delay:0.08s"></span>
+              <span class="eq-bar w-0.5 h-full bg-amber-400 rounded-full" style="animation-delay:0.18s"></span>
+            </div>
+          </div>
+          <span class="text-[10px] text-slate-500">Space = Play • 15s max</span>
         </div>
 
-        <div class="relative h-7 w-full bg-slate-950 rounded-lg border border-slate-800 overflow-hidden flex">
-          <!-- Active playback sweep overlay -->
-          <div id="playbackProgressFill" class="absolute inset-y-0 left-0 bg-gradient-to-r from-amber-500/80 to-rose-500/80 transition-none pointer-events-none" style="width: 0%;"></div>
-          <!-- Unlocked region tint -->
-          <div id="unlockedRegionTint" class="absolute inset-y-0 left-0 bg-amber-400/15 pointer-events-none" style="width: 2%;"></div>
+        <div class="relative pt-3.5">
+          <!-- ▼ Pointer triangle above the unlocked boundary -->
+          <div id="unlockedPointer" class="absolute top-0 -translate-x-1/2 transition-all duration-200 pointer-events-none" style="left: 1.3%;">
+            <div class="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[7px] border-t-slate-200"></div>
+          </div>
 
-          <!-- 6 Segment Markers: 0.1s, 0.3s, 0.5s, 1.5s, 2.5s, 5.0s -->
-          <div class="relative z-10 flex w-full text-[10px] font-mono">
-            <div data-seg="0" style="width: 14%" class="seg-marker border-r border-slate-800 flex items-center justify-center text-amber-300 font-bold">0.1s</div>
-            <div data-seg="1" style="width: 14%" class="seg-marker border-r border-slate-800 flex items-center justify-center text-slate-500">0.3s</div>
-            <div data-seg="2" style="width: 14%" class="seg-marker border-r border-slate-800 flex items-center justify-center text-slate-500">0.5s</div>
-            <div data-seg="3" style="width: 18%" class="seg-marker border-r border-slate-800 flex items-center justify-center text-slate-500">1.5s</div>
-            <div data-seg="4" style="width: 18%" class="seg-marker border-r border-slate-800 flex items-center justify-center text-slate-500">2.5s</div>
-            <div data-seg="5" style="width: 22%" class="seg-marker flex items-center justify-center text-slate-500">5.0s</div>
+          <!-- Proportional 5-segment progress bar (0.1s | 0.5s | 2s | 8s | 15s) -->
+          <div class="relative h-4 w-full bg-[#2a2e35] rounded-md overflow-hidden flex border border-slate-700/50">
+            <!-- Unlocked region tint -->
+            <div id="unlockedRegionTint" class="absolute inset-y-0 left-0 bg-slate-400/20 pointer-events-none transition-all duration-200" style="width: 1.3%;"></div>
+            <!-- Active playback sweep -->
+            <div id="playbackProgressFill" class="absolute inset-y-0 left-0 bg-gradient-to-r from-amber-400 to-rose-500 transition-none pointer-events-none" style="width: 0%;"></div>
+
+            <!-- Clean vertical dividers matching exact proportional intervals -->
+            <div class="relative z-10 flex w-full h-full pointer-events-none">
+              <div style="width: 1.3%" class="border-r border-[#0b0d17]"></div>
+              <div style="width: 3.2%" class="border-r border-[#0b0d17]"></div>
+              <div style="width: 10.0%" class="border-r border-[#0b0d17]"></div>
+              <div style="width: 39.0%" class="border-r border-[#0b0d17]"></div>
+              <div style="width: 46.5%"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -197,7 +207,7 @@
         </button>
 
         <button id="btnSkipAttempt" type="button" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-slate-200 transition">
-          Skip (+0.2s)
+          Skip (+0.4s)
         </button>
       </div>
 
@@ -209,6 +219,9 @@
               id="songSearchInput"
               type="text"
               autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
               placeholder="Search Hindi song, movie, or singer..."
               class="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 focus:border-amber-400 focus:outline-none text-sm text-white placeholder-slate-500"
             />
@@ -229,12 +242,15 @@
       <!-- Post-Game Result Card (Shown on Win / Loss) -->
       <div id="gameOverBanner" class="hidden pt-2 border-t border-slate-800 space-y-3">
         <div class="flex items-start justify-between gap-3">
-          <div>
-            <span id="resultBadge" class="inline-block text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 mb-1">
-              🎉 Correct!
-            </span>
-            <h3 id="answerSongTitle" class="text-base sm:text-lg font-extrabold text-white"></h3>
-            <p id="answerSongMeta" class="text-xs text-slate-400 mt-0.5"></p>
+          <div class="flex items-start gap-3">
+            <img id="answerArtworkImg" src="" alt="Album cover" class="hidden w-14 h-14 rounded-xl object-cover border border-slate-700 shadow-md flex-shrink-0" />
+            <div>
+              <span id="resultBadge" class="inline-block text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 mb-1">
+                🎉 Correct!
+              </span>
+              <h3 id="answerSongTitle" class="text-base sm:text-lg font-extrabold text-white"></h3>
+              <p id="answerSongMeta" class="text-xs text-slate-400 mt-0.5"></p>
+            </div>
           </div>
           <a id="answerSourceLink" href="https://en.wikipedia.org/wiki/Tum_Hi_Ho" target="_blank" rel="noopener noreferrer" class="text-xs text-amber-300 hover:underline whitespace-nowrap font-semibold">
             Credits ↗
@@ -331,7 +347,7 @@
       </div>
 
       <div class="space-y-1.5">
-        <div class="text-xs font-bold text-slate-300">Guess Distribution (1 to 6)</div>
+        <div class="text-xs font-bold text-slate-300">Guess Distribution (1 to 5)</div>
         <div id="guessDistributionBars" class="space-y-1.5"></div>
       </div>
 
@@ -396,23 +412,40 @@
       { day: 30, id: "jai-ho", title: "Jai Ho", hindiTitle: "जय हो", movie: "Slumdog Millionaire", year: 2008, category: "classic", singer: "A. R. Rahman & Sukhwinder Singh", composer: "A. R. Rahman", lyricist: "Gulzar", lyricHook: "Aaja aaja jind shamiyane ke tale, Jai Ho!", sourceUrl: "https://en.wikipedia.org/wiki/Jai_Ho_(song)", tempo: 132, notes: [440.00, 493.88, 523.25, 587.33, 659.25, 587.33, 523.25, 493.88] }
     ];
 
-    const UNLOCK_DURATIONS = [0.1, 0.3, 0.5, 1.5, 2.5, 5.0];
+    const UNLOCK_DURATIONS = [0.1, 0.5, 2.0, 8.0, 15.0];
+    const SEGMENT_END_PCT = [1.3, 4.5, 14.5, 53.5, 100];
+
+    function timeToBarPct(elapsedSec) {
+      if (elapsedSec <= 0) return 0;
+      for (let i = 0; i < UNLOCK_DURATIONS.length; i++) {
+        const prevT = i === 0 ? 0 : UNLOCK_DURATIONS[i - 1];
+        const currT = UNLOCK_DURATIONS[i];
+        const prevPct = i === 0 ? 0 : SEGMENT_END_PCT[i - 1];
+        const currPct = SEGMENT_END_PCT[i];
+        if (elapsedSec <= currT) {
+          const localRatio = (elapsedSec - prevT) / (currT - prevT);
+          return prevPct + localRatio * (currPct - prevPct);
+        }
+      }
+      return 100;
+    }
 
     // =========================================================================
     // 2. APPLICATION STATE & SAFE LOCALSTORAGE
     // =========================================================================
     const state = {
+      lang: "en",
       currentCategory: "all",
       currentSongIndex: 0,
+      currentArtworkUrl: "",
+      activeDropdownIndex: -1,
       attemptsUsed: 0,
       guesses: [],
       status: "playing", // 'playing' | 'won' | 'lost'
       isMuted: false,
       isPlayingAudio: false,
-      audioMode: "real", // 'real' | 'synth'
+      audioMode: "real",
       currentPreviewUrl: "",
-      customAudioObjectUrl: "",
-      hintVisible: false,
       showAdSlots: true,
       completedDays: {},
       stats: {
@@ -420,7 +453,7 @@
         wins: 0,
         currentStreak: 0,
         maxStreak: 0,
-        distribution: [0, 0, 0, 0, 0, 0]
+        distribution: [0, 0, 0, 0, 0]
       }
     };
 
@@ -465,14 +498,10 @@
 
     async function fetchRealSongPreview(song) {
       const badge = document.getElementById("audioSourceStatusBadge");
-      if (state.customAudioObjectUrl) {
-        state.currentPreviewUrl = state.customAudioObjectUrl;
-        if (badge) badge.textContent = "Custom MP3 Ready";
-        return;
-      }
 
       if (song.previewUrl) {
         state.currentPreviewUrl = song.previewUrl;
+        state.currentArtworkUrl = song.artworkUrl || "";
         const audioEl = document.getElementById("realSongAudio");
         if (audioEl) {
           audioEl.src = song.previewUrl;
@@ -492,6 +521,7 @@
         const match = (data.results || []).find(r => r.previewUrl);
         if (match && match.previewUrl) {
           state.currentPreviewUrl = match.previewUrl;
+          state.currentArtworkUrl = match.artworkUrl100 ? match.artworkUrl100.replace("100x100", "200x200") : "";
           const audioEl = document.getElementById("realSongAudio");
           if (audioEl) {
             audioEl.src = match.previewUrl;
@@ -529,15 +559,13 @@
 
     function animateProgressBar(durationSec) {
       const fill = document.getElementById("playbackProgressFill");
-      const maxBarWidthPct = (durationSec / 5.0) * 100;
       const start = performance.now();
 
       function step() {
         if (!state.isPlayingAudio) return;
-        const elapsed = (performance.now() - start) / 1000;
-        const ratio = Math.min(1, elapsed / durationSec);
-        if (fill) fill.style.width = `${ratio * maxBarWidthPct}%`;
-        if (ratio < 1) {
+        const elapsed = Math.min(durationSec, (performance.now() - start) / 1000);
+        if (fill) fill.style.width = `${timeToBarPct(elapsed)}%`;
+        if (elapsed < durationSec) {
           progressRafId = requestAnimationFrame(step);
         }
       }
@@ -551,7 +579,7 @@
       }
 
       const song = SONGS_DB[state.currentSongIndex];
-      const stageIndex = state.status === "playing" ? Math.min(state.attemptsUsed, 5) : 5;
+      const stageIndex = state.status === "playing" ? Math.min(state.attemptsUsed, 4) : 4;
       const durationSec = UNLOCK_DURATIONS[stageIndex];
       currentPlaybackDuration = durationSec;
 
@@ -641,9 +669,19 @@
     // =========================================================================
     // 4. GAMEPLAY RENDERING (SONGLESS-INSPIRED 6-ROW STACK)
     // =========================================================================
+    function getTodayPuzzleIndex() {
+      const anchor = new Date(2026, 10, 17); // Launch anchor
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const diffDays = Math.floor((today - anchor) / 86400000);
+      return ((diffDays % SONGS_DB.length) + SONGS_DB.length) % SONGS_DB.length;
+    }
+
     function loadPuzzleByIndex(index) {
       stopCurrentMelody();
       state.currentSongIndex = (index + SONGS_DB.length) % SONGS_DB.length;
+      state.currentArtworkUrl = "";
+      state.activeDropdownIndex = -1;
       const song = SONGS_DB[state.currentSongIndex];
 
       const saved = state.completedDays[song.day];
@@ -657,7 +695,6 @@
         state.guesses = [];
       }
 
-      state.hintVisible = false;
       const input = document.getElementById("songSearchInput");
       if (input) input.value = "";
       hideSearchDropdown();
@@ -673,7 +710,7 @@
       const target = SONGS_DB[state.currentSongIndex];
       let html = "";
 
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 5; i++) {
         const entry = state.guesses[i];
         const isCurrentActive = state.status === "playing" && i === state.attemptsUsed;
 
@@ -734,36 +771,33 @@
     }
 
     function updatePlayButtonUI() {
-      const stageIndex = state.status === "playing" ? Math.min(state.attemptsUsed, 5) : 5;
+      const stageIndex = state.status === "playing" ? Math.min(state.attemptsUsed, 4) : 4;
       const sec = UNLOCK_DURATIONS[stageIndex];
 
       const badge = document.getElementById("unlockedDurationBadge");
       if (badge) badge.textContent = `${sec}s unlocked`;
 
+      const pct = SEGMENT_END_PCT[stageIndex];
       const unlockedTint = document.getElementById("unlockedRegionTint");
-      if (unlockedTint) unlockedTint.style.width = `${(sec / 5.0) * 100}%`;
+      if (unlockedTint) unlockedTint.style.width = `${pct}%`;
 
-      document.querySelectorAll(".seg-marker").forEach((el, idx) => {
-        if (idx <= stageIndex) {
-          el.classList.remove("text-slate-500");
-          el.classList.add("text-amber-300", "font-bold");
-        } else {
-          el.classList.add("text-slate-500");
-          el.classList.remove("text-amber-300", "font-bold");
-        }
-      });
+      const pointer = document.getElementById("unlockedPointer");
+      if (pointer) pointer.style.left = `${pct}%`;
 
       const playBtn = document.getElementById("btnPlayMelody");
       const playIcon = document.getElementById("playBtnIcon");
+      const eq = document.getElementById("eqVisualizer");
       if (playBtn && playIcon) {
         if (state.isPlayingAudio) {
           playIcon.textContent = "⏹";
           playIcon.classList.remove("ml-0.5");
           playBtn.classList.add("play-pulse");
+          if (eq) eq.classList.add("eq-playing");
         } else {
           playIcon.textContent = "▶";
           playIcon.classList.add("ml-0.5");
           playBtn.classList.remove("play-pulse");
+          if (eq) eq.classList.remove("eq-playing");
         }
       }
 
@@ -776,41 +810,16 @@
         } else {
           skipBtn.disabled = false;
           skipBtn.classList.remove("opacity-40", "cursor-not-allowed");
-          if (state.attemptsUsed < 5) {
-            const delta = (UNLOCK_DURATIONS[state.attemptsUsed + 1] - sec).toFixed(1);
-            skipBtn.textContent = `Skip (+${delta}s)`;
+          if (state.attemptsUsed < 4) {
+            const nextSec = UNLOCK_DURATIONS[state.attemptsUsed + 1];
+            const delta = nextSec - sec;
+            const deltaStr = Number.isInteger(delta) ? String(delta) : delta.toFixed(1);
+            skipBtn.textContent = `Skip (+${deltaStr}s)`;
           } else {
             skipBtn.textContent = "Give Up";
           }
         }
       }
-    }
-
-    function renderHintBox() {
-      const box = document.getElementById("peekHintBox");
-      const label = document.getElementById("hintToggleLabel");
-      if (!box || !label) return;
-
-      if (!state.hintVisible) {
-        box.classList.add("hidden");
-        label.textContent = "Peek Progressive Clue";
-        return;
-      }
-
-      const song = SONGS_DB[state.currentSongIndex];
-      const clues = [
-        `Release Year: ${song.year}`,
-        `Music Director: ${song.composer}`,
-        `Film / Album: "${song.movie}" (${song.year})`,
-        `Playback Singer(s): ${song.singer}`,
-        `Lyricist: ${song.lyricist}`,
-        `Lyric Hook: "${song.lyricHook}"`
-      ];
-      const idx = state.status === "playing" ? Math.min(state.attemptsUsed, 5) : 5;
-      document.getElementById("peekHintTitle").textContent = `Clue #${idx + 1} (Unlocked)`;
-      document.getElementById("peekHintText").textContent = clues[idx];
-      box.classList.remove("hidden");
-      label.textContent = "Hide Clue";
     }
 
     function submitGuess() {
@@ -850,10 +859,10 @@
         state.status = "won";
         playUiSound("win");
         recordGameCompletion(target.day, "won", state.attemptsUsed);
-      } else if (state.attemptsUsed >= 6) {
+      } else if (state.attemptsUsed >= 5) {
         state.status = "lost";
         playUiSound("wrong");
-        recordGameCompletion(target.day, "lost", 6);
+        recordGameCompletion(target.day, "lost", 5);
       } else {
         playUiSound("wrong");
       }
@@ -867,10 +876,10 @@
       state.guesses.push({ type: "skip", song: null });
       state.attemptsUsed += 1;
 
-      if (state.attemptsUsed >= 6) {
+      if (state.attemptsUsed >= 5) {
         state.status = "lost";
         playUiSound("wrong");
-        recordGameCompletion(target.day, "lost", 6);
+        recordGameCompletion(target.day, "lost", 5);
       }
       renderAll();
     }
@@ -886,7 +895,7 @@
           if (state.stats.currentStreak > state.stats.maxStreak) {
             state.stats.maxStreak = state.stats.currentStreak;
           }
-          state.stats.distribution[Math.min(5, Math.max(0, attempts - 1))] += 1;
+          state.stats.distribution[Math.min(4, Math.max(0, attempts - 1))] = (state.stats.distribution[Math.min(4, Math.max(0, attempts - 1))] || 0) + 1;
         } else {
           state.stats.currentStreak = 0;
         }
@@ -900,7 +909,7 @@
       grid.innerHTML = SONGS_DB.map((song, idx) => {
         const rec = state.completedDays[song.day];
         const statusText = rec
-          ? rec.status === "won" ? `✅ ${rec.attempts}/6` : "❌ Missed"
+          ? rec.status === "won" ? `✅ ${rec.attempts}/5` : "❌ Missed"
           : "Play";
         return `
           <button type="button" data-archive-idx="${idx}" class="archive-item-btn text-left p-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border ${idx === state.currentSongIndex ? 'border-amber-400' : 'border-slate-800'} flex items-center justify-between gap-2 transition">
@@ -932,7 +941,7 @@
       const barsEl = document.getElementById("guessDistributionBars");
       if (barsEl) {
         const maxVal = Math.max(1, ...distribution);
-        barsEl.innerHTML = [0, 1, 2, 3, 4, 5].map(i => {
+        barsEl.innerHTML = [0, 1, 2, 3, 4].map(i => {
           const cnt = distribution[i] || 0;
           const pct = Math.max(8, Math.round((cnt / maxVal) * 100));
           return `
@@ -966,7 +975,7 @@
 
         const badge = document.getElementById("resultBadge");
         badge.textContent = state.status === "won"
-          ? `🎉 Sahi Jawaab! (${state.attemptsUsed}/6)`
+          ? `🎉 Sahi Jawaab! (${state.attemptsUsed}/5)`
           : "💡 Better luck tomorrow!";
         badge.className = state.status === "won"
           ? "inline-block text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 mb-1"
@@ -975,118 +984,167 @@
         document.getElementById("answerSongTitle").textContent = `${song.title} (${song.hindiTitle})`;
         document.getElementById("answerSongMeta").textContent = `${song.movie} (${song.year}) • ${song.singer} • Music: ${song.composer}`;
         document.getElementById("answerSourceLink").href = song.sourceUrl;
+        const artImg = document.getElementById("answerArtworkImg");
+        if (artImg) {
+          if (state.currentArtworkUrl) {
+            artImg.src = state.currentArtworkUrl;
+            artImg.classList.remove("hidden");
+          } else {
+            artImg.classList.add("hidden");
+          }
+        }
       }
 
+      const isHi = state.lang === "hi";
+      const submitBtn = document.getElementById("btnSubmitGuess");
+      if (submitBtn) submitBtn.textContent = isHi ? "अनुमान लगाएं" : "Submit";
+      const searchIn = document.getElementById("songSearchInput");
+      if (searchIn) searchIn.placeholder = isHi ? "हिंदी गाना, फ़िल्म या गायक खोजें..." : "Search Hindi song, movie, or singer...";
+      const langBtn = document.getElementById("btnLangToggle");
+      if (langBtn) langBtn.textContent = isHi ? "हिंदी / EN" : "EN / हिं";
+
       document.getElementById("muteIcon").textContent = state.isMuted ? "🔇" : "🔊";
-      document.getElementById("modeSwitchLabel").textContent = state.audioMode === "real" ? "Real Song" : "Synth";
 
       updatePlayButtonUI();
       renderGuessRows();
-      renderHintBox();
       renderArchiveGrid();
       renderStatsModal();
     }
 
     // =========================================================================
-    // 5. AUTOCOMPLETE & LIVE APPLE MUSIC CATALOG SEARCH
+    // 5. LIVE APPLE MUSIC CATALOG SEARCH (UNLIMITED HINDI SONGS)
     // =========================================================================
     let liveSearchAbort = null;
+    let liveSearchDebounce = null;
+
     function updateSearchDropdown(queryText) {
       const dropdown = document.getElementById("searchDropdown");
       const clearBtn = document.getElementById("btnClearSearch");
       if (!dropdown) return;
 
-      const q = queryText.trim().toLowerCase();
+      const q = queryText.trim();
       if (clearBtn) clearBtn.classList.toggle("hidden", q.length === 0);
 
-      if (!q) {
+      if (q.length < 2) {
         hideSearchDropdown();
         return;
       }
 
-      const matches = SONGS_DB.filter(
-        s => s.title.toLowerCase().includes(q) || s.movie.toLowerCase().includes(q) || s.singer.toLowerCase().includes(q)
-      ).slice(0, 8);
+      if (liveSearchDebounce) clearTimeout(liveSearchDebounce);
+      dropdown.innerHTML = `<div class="px-3.5 py-2.5 text-xs text-slate-400">Searching Hindi songs...</div>`;
+      dropdown.classList.remove("hidden");
 
-      if (matches.length === 0) {
-        dropdown.innerHTML = `<div class="px-3.5 py-2.5 text-xs text-amber-300">Searching live Hindi music catalog...</div>`;
-        dropdown.classList.remove("hidden");
+      liveSearchDebounce = setTimeout(() => {
         searchLiveItunesForAutocomplete(q, dropdown);
-        return;
-      }
+      }, 180);
+    }
 
-      dropdown.innerHTML = matches.map(s => `
-        <button type="button" data-select-title="${s.title}" class="autocomplete-item w-full text-left px-3.5 py-2 hover:bg-slate-800/80 flex items-center justify-between gap-2 transition">
-          <div>
-            <div class="text-xs sm:text-sm font-bold text-white">${s.title} <span class="text-amber-300 font-normal hindi-font">(${s.hindiTitle})</span></div>
-            <div class="text-[11px] text-slate-400">${s.movie} (${s.year}) • ${s.singer}</div>
-          </div>
-          <span class="text-[11px] text-amber-300 font-semibold">Pick</span>
+    async function searchLiveItunesForAutocomplete(q, dropdown) {
+      const qLower = q.toLowerCase();
+      const localMatches = SONGS_DB.filter(
+        s => s.title.toLowerCase().includes(qLower) || s.movie.toLowerCase().includes(qLower) || s.singer.toLowerCase().includes(qLower)
+      ).map(s => ({
+        title: s.title,
+        subtitle: `${s.movie} (${s.year}) • ${s.singer}`,
+        artist: s.singer,
+        movie: s.movie,
+        year: s.year,
+        previewUrl: s.previewUrl || "",
+        sourceUrl: s.sourceUrl,
+        artworkUrl: s.artworkUrl || ""
+      }));
+
+      try {
+        if (liveSearchAbort) liveSearchAbort.abort();
+        liveSearchAbort = new AbortController();
+        const res = await fetch(
+          `https://itunes.apple.com/search?term=${encodeURIComponent(q + " hindi")}&media=music&entity=song&country=IN&limit=15`,
+          { signal: liveSearchAbort.signal }
+        );
+        const data = await res.json();
+        const liveItems = (data.results || [])
+          .filter(r => r.trackName && r.previewUrl)
+          .map(r => {
+            const cleanTitle = r.trackName.replace(/\s*\(From.*?\)/i, "").trim();
+            return {
+              title: cleanTitle,
+              subtitle: `${r.collectionName || "Bollywood"} (${(r.releaseDate || "2022").slice(0, 4)}) • ${r.artistName}`,
+              artist: r.artistName,
+              movie: r.collectionName || "Bollywood",
+              year: parseInt((r.releaseDate || "2022").slice(0, 4), 10) || 2022,
+              previewUrl: r.previewUrl,
+              sourceUrl: r.trackViewUrl || "https://music.apple.com/in/browse",
+              artworkUrl: r.artworkUrl100 ? r.artworkUrl100.replace("100x100", "200x200") : ""
+            };
+          });
+
+        const seen = new Set();
+        const combined = [];
+        [...liveItems, ...localMatches].forEach(item => {
+          const key = item.title.toLowerCase();
+          if (!seen.has(key)) {
+            seen.add(key);
+            combined.push(item);
+          }
+        });
+        combined.sort((a, b) => a.title.localeCompare(b.title));
+        const finalItems = combined.slice(0, 12);
+
+        if (finalItems.length === 0) {
+          dropdown.innerHTML = `<div class="px-3.5 py-2.5 text-xs text-slate-400">No Hindi songs found. Try another title or singer.</div>`;
+          return;
+        }
+
+        renderDropdownItems(finalItems, dropdown);
+      } catch (e) {
+        if (e.name === "AbortError") return;
+        const fallbackItems = localMatches.sort((a, b) => a.title.localeCompare(b.title)).slice(0, 10);
+        if (fallbackItems.length === 0) {
+          dropdown.innerHTML = `<div class="px-3.5 py-2.5 text-xs text-slate-400">No songs found.</div>`;
+        } else {
+          renderDropdownItems(fallbackItems, dropdown);
+        }
+      }
+    }
+
+    function renderDropdownItems(items, dropdown) {
+      dropdown.innerHTML = items.map((item, idx) => `
+        <button type="button" data-item-idx="${idx}" class="autocomplete-item w-full text-left px-3.5 py-2.5 hover:bg-slate-800/80 transition">
+          <div class="text-xs sm:text-sm font-semibold text-white truncate">${item.title}</div>
+          <div class="text-[11px] text-slate-400 truncate">${item.subtitle}</div>
         </button>
       `).join("");
 
       dropdown.classList.remove("hidden");
       dropdown.querySelectorAll(".autocomplete-item").forEach(btn => {
         btn.addEventListener("click", () => {
-          document.getElementById("songSearchInput").value = btn.getAttribute("data-select-title");
+          const item = items[parseInt(btn.getAttribute("data-item-idx"), 10)];
+          if (!item) return;
+          if (!SONGS_DB.some(s => s.title.toLowerCase() === item.title.toLowerCase())) {
+            SONGS_DB.push({
+              day: SONGS_DB.length + 1,
+              id: "live-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+              title: item.title,
+              hindiTitle: "बॉलीवुड हिट",
+              movie: item.movie,
+              year: item.year,
+              category: "all",
+              singer: item.artist,
+              composer: item.artist,
+              lyricist: "Official Release",
+              lyricHook: `From "${item.movie}"`,
+              sourceUrl: item.sourceUrl,
+              tempo: 96,
+              notes: [329.63, 392.00, 440.00, 493.88, 440.00, 392.00, 329.63, 440.00],
+              previewUrl: item.previewUrl,
+              artworkUrl: item.artworkUrl
+            });
+          }
+          document.getElementById("songSearchInput").value = item.title;
           hideSearchDropdown();
           submitGuess();
         });
       });
-    }
-
-    async function searchLiveItunesForAutocomplete(q, dropdown) {
-      try {
-        if (liveSearchAbort) liveSearchAbort.abort();
-        liveSearchAbort = new AbortController();
-        const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q + " hindi")}&media=music&entity=song&country=IN&limit=6`, { signal: liveSearchAbort.signal });
-        const data = await res.json();
-        const items = (data.results || []).filter(r => r.trackName && r.previewUrl);
-        if (items.length === 0) {
-          dropdown.innerHTML = `<div class="px-3.5 py-2.5 text-xs text-slate-400">No songs found. Try another title or singer.</div>`;
-          return;
-        }
-        dropdown.innerHTML = items.map((item, idx) => `
-          <button type="button" data-live-idx="${idx}" class="live-autocomplete-item w-full text-left px-3.5 py-2 hover:bg-slate-800/80 flex items-center justify-between gap-2 transition">
-            <div>
-              <div class="text-xs sm:text-sm font-bold text-white">${item.trackName}</div>
-              <div class="text-[11px] text-slate-400">${item.collectionName || "Bollywood"} • ${item.artistName}</div>
-            </div>
-            <span class="text-[11px] text-emerald-400 font-semibold">Live ↵</span>
-          </button>
-        `).join("");
-
-        dropdown.querySelectorAll(".live-autocomplete-item").forEach(btn => {
-          btn.addEventListener("click", () => {
-            const item = items[parseInt(btn.getAttribute("data-live-idx"), 10)];
-            if (!item) return;
-            if (!SONGS_DB.some(s => s.title.toLowerCase() === item.trackName.toLowerCase())) {
-              SONGS_DB.push({
-                day: SONGS_DB.length + 1,
-                id: "live-" + Date.now(),
-                title: item.trackName,
-                hindiTitle: "बॉलीवुड हिट",
-                movie: item.collectionName || "Hindi Single",
-                year: parseInt((item.releaseDate || "2022").slice(0, 4), 10) || 2022,
-                category: "all",
-                singer: item.artistName,
-                composer: item.artistName,
-                lyricist: "Official Release",
-                lyricHook: `From "${item.collectionName || item.trackName}"`,
-                sourceUrl: item.trackViewUrl || "https://music.apple.com/in/browse",
-                tempo: 96,
-                notes: [329.63, 392.00, 440.00, 493.88, 440.00, 392.00, 329.63, 440.00],
-                previewUrl: item.previewUrl
-              });
-            }
-            document.getElementById("songSearchInput").value = item.trackName;
-            hideSearchDropdown();
-            submitGuess();
-          });
-        });
-      } catch (e) {
-        if (e.name !== "AbortError") hideSearchDropdown();
-      }
     }
 
     async function fetchLiveRandomPopularSong() {
@@ -1166,7 +1224,7 @@
         const same = g.song.composer === song.composer || g.song.singer.split("&")[0].trim() === song.singer.split("&")[0].trim();
         return same ? "🟨" : "🟥";
       }).join("");
-      return `🔊 SurPaheli #${song.day} (${state.status === "won" ? state.attemptsUsed + "/6" : "X/6"})\n${boxes}\nGuess today's Hindi song from 0.1s!`;
+      return `🔊 SurPaheli #${song.day} (${state.status === "won" ? state.attemptsUsed + "/5" : "X/5"})\n${boxes}\nGuess today's Hindi song from 0.1s!`;
     }
 
     let toastTimer = null;
@@ -1191,7 +1249,7 @@
         title.textContent = "🎵 How to Play SurPaheli";
         body.innerHTML = `
           <p><strong>1.</strong> Press <strong>▶</strong> to listen to a <strong>0.1s</strong> snippet of today's Hindi Bollywood song.</p>
-          <p><strong>2.</strong> Guess the song or hit <strong>Skip</strong> to unlock longer audio: <code>0.1s → 0.3s → 0.5s → 1.5s → 2.5s → 5.0s</code>.</p>
+          <p><strong>2.</strong> Guess the song or hit <strong>Skip</strong> to unlock longer audio: <code>0.1s → 0.5s → 2s → 8s → 15s</code>.</p>
           <p><strong>3. Color Key:</strong> 🟩 Exact song • 🟨 Right singer or composer • 🟥 Miss • ⬛ Skipped.</p>
         `;
       } else if (type === "privacy") {
@@ -1272,47 +1330,56 @@
         renderAll();
       });
 
-      document.getElementById("btnModeSwitch")?.addEventListener("click", () => {
-        stopCurrentMelody();
-        state.audioMode = state.audioMode === "real" ? "synth" : "real";
-        renderAll();
-        showToast(`Switched to ${state.audioMode === "real" ? "Real Song" : "Synth"} mode`);
-      });
 
-      document.getElementById("btnToggleHint")?.addEventListener("click", () => {
-        state.hintVisible = !state.hintVisible;
-        renderHintBox();
-      });
 
-      document.getElementById("customMp3Input")?.addEventListener("change", e => {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        stopCurrentMelody();
-        if (state.customAudioObjectUrl) {
-          try { URL.revokeObjectURL(state.customAudioObjectUrl); } catch (err) {}
-        }
-        state.customAudioObjectUrl = URL.createObjectURL(file);
-        state.currentPreviewUrl = state.customAudioObjectUrl;
-        state.audioMode = "real";
-        const audioEl = document.getElementById("realSongAudio");
-        if (audioEl) {
-          audioEl.src = state.customAudioObjectUrl;
-          audioEl.load();
-        }
+      document.getElementById("btnLangToggle")?.addEventListener("click", () => {
+        state.lang = state.lang === "en" ? "hi" : "en";
         renderAll();
-        showToast(`Loaded "${file.name}"`);
       });
 
       const searchInput = document.getElementById("songSearchInput");
       if (searchInput) {
-        searchInput.addEventListener("input", e => updateSearchDropdown(e.target.value));
+        searchInput.addEventListener("input", e => {
+          state.activeDropdownIndex = -1;
+          updateSearchDropdown(e.target.value);
+        });
         searchInput.addEventListener("keydown", e => {
-          if (e.key === "Enter") {
+          const items = document.querySelectorAll("#searchDropdown button");
+          if (e.key === "ArrowDown" && items.length > 0) {
             e.preventDefault();
-            submitGuess();
+            state.activeDropdownIndex = (state.activeDropdownIndex + 1) % items.length;
+            items.forEach((el, idx) => el.classList.toggle("bg-slate-800", idx === state.activeDropdownIndex));
+          } else if (e.key === "ArrowUp" && items.length > 0) {
+            e.preventDefault();
+            state.activeDropdownIndex = (state.activeDropdownIndex - 1 + items.length) % items.length;
+            items.forEach((el, idx) => el.classList.toggle("bg-slate-800", idx === state.activeDropdownIndex));
+          } else if (e.key === "Enter") {
+            e.preventDefault();
+            if (state.activeDropdownIndex >= 0 && items[state.activeDropdownIndex]) {
+              items[state.activeDropdownIndex].click();
+            } else {
+              submitGuess();
+            }
           }
         });
       }
+
+      document.addEventListener("click", e => {
+        const guessSection = document.getElementById("guessInputSection");
+        if (guessSection && !guessSection.contains(e.target)) {
+          hideSearchDropdown();
+        }
+      });
+
+      document.addEventListener("keydown", e => {
+        if (e.key === "Escape") {
+          hideSearchDropdown();
+        }
+        if (e.code === "Space" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "BUTTON") {
+          e.preventDefault();
+          playSongMelodyHook();
+        }
+      });
       document.getElementById("btnClearSearch")?.addEventListener("click", () => {
         searchInput.value = "";
         hideSearchDropdown();
@@ -1324,9 +1391,9 @@
       document.getElementById("btnShareFromStats")?.addEventListener("click", () => copyTextSafe(buildShareText(), "Stats copied!"));
       document.getElementById("btnResetAllProgress")?.addEventListener("click", () => {
         state.completedDays = {};
-        state.stats = { played: 0, wins: 0, currentStreak: 0, maxStreak: 0, distribution: [0, 0, 0, 0, 0, 0] };
+        state.stats = { played: 0, wins: 0, currentStreak: 0, maxStreak: 0, distribution: [0, 0, 0, 0, 0] };
         savePersistedState();
-        loadPuzzleByIndex(0);
+        loadPuzzleByIndex(getTodayPuzzleIndex());
         showToast("Progress reset!");
       });
 
